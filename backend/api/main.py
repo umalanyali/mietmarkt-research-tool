@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Form, HTTPException, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
@@ -23,6 +23,7 @@ from mietmarkt.agenten.graph import Antwort, Freigabe, baue_graph, lauf_konfig, 
 from mietmarkt.agenten.modelle import Modelle, aus_konfig
 from mietmarkt.comps import im_umkreis
 from mietmarkt.db import datenbankpfad, engine
+from mietmarkt.dokumente import DokumentUnlesbar, art_erkennen, bildgroesse, indexieren, ordner, seiten_lesen
 from mietmarkt.export import markdown, pptx
 from mietmarkt.geo import entfernung_km
 from mietmarkt.geo.dienste import (
@@ -43,7 +44,7 @@ from mietmarkt.kennzahlen import (
     tage_online,
 )
 from mietmarkt.konfig import Konfig
-from mietmarkt.modelle import CompBasis, Lauf, Marktkennzahl, Projekt, ProjektBasis, Quelle, Wert
+from mietmarkt.modelle import CompBasis, Dokument, Lauf, Marktkennzahl, Projekt, ProjektBasis, Quelle, Wert
 
 app = FastAPI(title="Mietmarkt Research", version=__version__)
 # Nur Anfragen an localhost: schützt vor DNS-Rebinding (eine fremde Domain, die auf 127.0.0.1 zeigt)
@@ -238,6 +239,63 @@ def kennzahlen(projekt_id: int, s: Sitzung) -> KennzahlenAus:
         comps=comps_kennzahlen(alle_comps, p.stichtag),
         preisklassen=preisklassen_auswertung(klassen),
     )
+
+
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+MAX_BILD_BYTES = 5 * 1024 * 1024  # Grenze der Anthropic-API je Bild
+
+
+class DokumentAus(BaseModel):
+    """Angelegtes Dokument."""
+
+    id: int
+    dateiname: str
+    art: str
+    seiten: int
+    abschnitte: int
+    ki_freigabe: bool
+
+
+@app.post("/api/projekte/{projekt_id}/dokumente", status_code=201)
+async def dokument_hochladen(projekt_id: int, s: Sitzung, datei: UploadFile,
+                             ki_freigabe: Annotated[bool, Form()] = False) -> DokumentAus:
+    """Nimmt eine eigene Unterlage an (PDF, PNG/JPG, Text), legt sie unter daten/uploads/ ab und indexiert den Text.
+
+    Eingabe: Projekt-ID, Datei, ki_freigabe (darf das Dokument an die KI; Standard nein). Ausgabe: DokumentAus.
+    404 ohne Projekt, 413 zu groß, 415 anderer Dateityp, 422 unlesbar. Der Typ kommt aus dem Inhalt; der
+    Dateiname dient nur der Anzeige, gespeichert wird unter einem zufälligen Namen.
+    """
+    _projekt(s, projekt_id)
+    daten = await datei.read(MAX_UPLOAD_BYTES + 1)
+    art = art_erkennen(daten)
+    if len(daten) > MAX_UPLOAD_BYTES or (art in ("png", "jpg") and len(daten) > MAX_BILD_BYTES):
+        raise HTTPException(status_code=413, detail="Datei zu groß (höchstens 10 MB, Bilder 5 MB)")
+    if art is None:
+        raise HTTPException(status_code=415, detail="Nur PDF, PNG, JPG oder Text")
+    name = Path(datei.filename or "").name[:200] or "unterlage"
+    pfad = Path("uploads") / str(projekt_id) / f"{uuid.uuid4().hex}.{art}"
+    ziel = ordner(s.get_bind()) / pfad
+    try:
+        if art in ("png", "jpg"):
+            bildgroesse(daten)
+        ziel.parent.mkdir(parents=True, exist_ok=True)
+        ziel.write_bytes(daten)
+        seiten = seiten_lesen(ziel, art)
+    except DokumentUnlesbar as f:
+        ziel.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail=str(f)) from f
+    heute = dt.date.today()
+    quelle = Quelle(projekt_id=projekt_id, name=name, art="datei", datei=name, stand=f"{heute:%d.%m.%Y}",
+                    abgerufen_am=heute)
+    s.add(quelle)
+    s.flush()
+    d = Dokument(projekt_id=projekt_id, quelle_id=quelle.id, dateiname=name, pfad=pfad.as_posix(), art=art,
+                 seiten=len(seiten), ki_freigabe=ki_freigabe, hochgeladen_am=dt.datetime.now(dt.UTC))
+    s.add(d)
+    s.commit()
+    s.refresh(d)
+    return DokumentAus(id=d.id, dateiname=name, art=art, seiten=d.seiten, abschnitte=indexieren(s, d, seiten),
+                       ki_freigabe=ki_freigabe)
 
 
 @app.post("/api/projekte/{projekt_id}/laeufe", status_code=201)

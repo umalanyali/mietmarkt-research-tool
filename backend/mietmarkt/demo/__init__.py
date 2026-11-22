@@ -24,6 +24,8 @@ def seed(e: Engine) -> int:
     """
     SQLModel.metadata.drop_all(e)
     SQLModel.metadata.create_all(e)
+    with e.begin() as c:  # der Volltextindex ist keine SQLModel-Tabelle und wird eigens geleert
+        c.exec_driver_sql("DELETE FROM abschnitt")
     daten = yaml.safe_load(DATEI.read_text(encoding="utf-8"))
     with Session(e) as s:
         for p in daten["projekte"]:

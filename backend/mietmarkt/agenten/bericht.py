@@ -73,7 +73,9 @@ def anzeigen(w: dict) -> str:
     if w.get("einheit") == "km":
         m = round(w["wert"] * 100) * 10  # auf 10 m
         return f"rd. {de(m, 0)} m" if m < 1000 else f"rd. {de(w['wert'], 1)} km"
-    return f"{de(w['wert'], _stellen(w))} {w.get('einheit', '')}".rstrip()
+    text = f"{de(w['wert'], _stellen(w))} {w.get('einheit', '')}".rstrip()
+    # Aus Diagrammen abgelesene Werte sind nur ungefähr (die Ablesung schreibt „Diagramm“ in den Rechenweg)
+    return f"rd. {text}" if w.get("herkunft") == "abgelesen" and "Diagramm" in w.get("rechenweg_text", "") else text
 
 
 def beschreibung(w: dict, quellen: dict[int, str]) -> str:

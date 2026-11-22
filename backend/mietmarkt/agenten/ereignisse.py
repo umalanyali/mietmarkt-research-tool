@@ -3,7 +3,7 @@ für die Oberfläche: Agent gestartet, Werkzeugaufruf, Werkzeugergebnis, Text, A
 wartet auf Freigabe bzw. Antwort, Freigabe, Antwort, Prüfung, Bericht, Abbruch."""
 from langchain_core.messages import AIMessage
 
-from .graph import AGENTEN, lesen
+from .graph import AGENTEN, DOKUMENT_AGENTEN, lesen
 
 
 def ereignisse(modus: str, daten: object) -> list[dict]:
@@ -41,6 +41,12 @@ def ereignisse(modus: str, daten: object) -> list[dict]:
                     for a, r in update["ergebnisse"].items()]
         elif knoten == "rueckfrage":
             aus.append({"typ": "antwort", "antwort": update["antworten"][-1]})
+        elif knoten in DOKUMENT_AGENTEN and "ergebnisse" in update:
+            # Exposé- und Vision-Agent: der Code ruft ihre Auswertung selbst auf, es gibt keinen Werkzeugaufruf davor
+            r = update["ergebnisse"][knoten]
+            aus += [{"typ": "werkzeugergebnis", "agent": knoten, "werkzeug": w["name"], "ergebnis": w["ergebnis"]}
+                    for w in r["werkzeuge"]]
+            aus.append({"typ": "agent_fertig", "agent": knoten, "text": r["text"], "markierungen": r["markierungen"]})
         elif knoten == "freigabe":
             aus.append({"typ": "freigabe", **update["freigabe"]})
         elif knoten == "pruefung" and "pruefungen" in update:

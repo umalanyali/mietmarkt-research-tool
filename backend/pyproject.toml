@@ -18,6 +18,9 @@ dependencies = [
   "langgraph>=1.0",
   "langgraph-checkpoint-sqlite>=3.0",
   "python-pptx>=1.0",
+  "pdfplumber>=0.11",
+  "pillow>=10",
+  "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]

@@ -11,12 +11,13 @@ from sqlalchemy import Engine
 from sqlmodel import Session, select
 
 from ..comps import filtern, im_umkreis
+from ..dokumente import suchen
 from ..geo import dienste
 from ..geo.umfeld import umfeld as geo_umfeld
 from ..kennzahlen import comps_kennzahlen, eur_qm
 from ..konfig import Konfig
 from ..mietansatz import BASIS_TEXT, Anpassung, Basis, fachregeln_pruefen, herleiten, mit_fortschreibung
-from ..modelle import Comp, Herkunft, Marktkennzahl, Projekt, Wert
+from ..modelle import Comp, Dokument, Herkunft, Marktkennzahl, Projekt, Wert
 from ..plausibilitaet import abgleich, alter, anzahl, ausreisser_iqr
 
 # InjectedState: LangGraph setzt die Projekt-ID aus dem Zustand ein. Das Modell sieht den Parameter nicht und
@@ -38,6 +39,17 @@ def fortschreibung(p: Projekt, k: Konfig) -> tuple:
     """Daten der Fortschreibung. Eingabe: Projekt, Konfig. Ausgabe: (Stichtag, Vermarktungsstart, g); g aus dem
     Projekt, sonst MIETWACHSTUM_PA aus .env."""
     return p.stichtag, p.vermarktungsstart, k.mietwachstum_pa if p.mietwachstum_pa is None else p.mietwachstum_pa
+
+
+def freigegebene_dokumente(s: Session, p: Projekt, k: Konfig) -> tuple[list[Dokument], int]:
+    """Unterlagen, die das Modell sehen darf. Eingabe: Sitzung, Projekt, Konfig.
+
+    Ausgabe: (Dokumente, Anzahl zurückgehalten). Erlaubt: beim Hochladen freigegeben, Demo-Projekt oder
+    KI_PORTALDATEN_SENDEN=true – hochgeladene Unterlagen können Portal-Inhalte sein (z. B. Exposés).
+    """
+    alle = list(s.exec(select(Dokument).where(Dokument.projekt_id == p.id).order_by(Dokument.id)))
+    erlaubt = [d for d in alle if d.ki_freigabe or p.demo or k.ki_portaldaten_senden]
+    return erlaubt, len(alle) - len(erlaubt)
 
 
 def werkzeuge(e: Engine, k: Konfig) -> dict[str, list[BaseTool]]:
@@ -135,6 +147,16 @@ def werkzeuge(e: Engine, k: Konfig) -> dict[str, list[BaseTool]]:
         return _json(mit_hinweis({"basis": basis, **herleitung.model_dump()}, comps=ohne))
 
     @tool
+    def dokumente_suchen(projekt_id: ProjektId, frage: str) -> str:
+        """Volltextsuche in den Unterlagen, die der Nutzer zum Projekt hochgeladen hat (Exposés, Notizen, Berichte).
+        Liefert Treffer mit Datei, Seite und Textausschnitt. Jede Aussage daraus belegst du mit [Quelle: Datei, S. X]."""
+        with Session(e) as s:
+            p = s.get(Projekt, projekt_id)
+            erlaubt, ohne = freigegebene_dokumente(s, p, k)
+            treffer = suchen(s, p.id, frage, {d.id for d in erlaubt})
+        return _json(mit_hinweis({"treffer": treffer}, dokumente=ohne))
+
+    @tool
     def comps_pruefen(projekt_id: ProjektId) -> str:
         """Prüft die Comps im Umkreis: Anzahl (mindestens 5), Alter (höchstens 12 Monate vor dem Stichtag online)
         und Ausreißer (€/m² außerhalb Q1 − 1,5 × IQR bis Q3 + 1,5 × IQR). Je Prüfung „auffaellig“ und Werte."""
@@ -161,5 +183,6 @@ def werkzeuge(e: Engine, k: Konfig) -> dict[str, list[BaseTool]]:
         ansatz = Wert(wert=ansatz_eur_qm, einheit="€/m²", herkunft=Herkunft.BERECHNET, rechenweg_text="freigegebener Mietansatz")
         return _json(mit_hinweis(abgleich(ansatz, vergleich), comps=comps_ohne, marktkennzahlen=markt_ohne))
 
-    return {"standort": [lage, umfeld], "marktdaten": [comps_filtern, kennzahlen],
-            "mietansatz": [kennzahlen, mietansatz_herleiten], "pruefung": [comps_pruefen, ansatz_pruefen]}
+    return {"standort": [lage, umfeld, dokumente_suchen], "marktdaten": [comps_filtern, kennzahlen, dokumente_suchen],
+            "mietansatz": [kennzahlen, mietansatz_herleiten, dokumente_suchen],
+            "pruefung": [comps_pruefen, ansatz_pruefen]}

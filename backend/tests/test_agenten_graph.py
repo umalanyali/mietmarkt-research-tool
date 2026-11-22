@@ -217,7 +217,7 @@ def test_standort_nutzt_projektkoordinaten_statt_geokodierung(db):
     respx lässt keine ungemockte Anfrage durch: ein Aufruf von Nominatim würde den Test scheitern lassen.
     """
     geodienste_mocken()
-    assert [w.name for w in werkzeuge(db, KONFIG)["standort"]] == ["lage", "umfeld"]
+    assert [w.name for w in werkzeuge(db, KONFIG)["standort"]] == ["lage", "umfeld", "dokumente_suchen"]
     ende = laufen(graph(voller_lauf(), db, KONFIG), startzustand(1))
     lage = ende["ergebnisse"]["standort"]["werkzeuge"][0]
     with Session(db) as s:
@@ -518,3 +518,83 @@ def test_bericht_agent_sieht_gebiet_zeitraum_und_quelle(db):
     katalog = m.stark.aufrufe[-1][-1].text
     assert "Mietspiegel Ø Nettokaltmiete, Stadt, Quelle: Mietspiegel Musterstadt, Stand 2026" in katalog
     assert "Baufertigstellungen Wohnungen, 2025, Stadt, Quelle: Statistisches Landesamt" in katalog
+
+
+def unterlagen(db, freigabe: bool = True) -> None:
+    """Legt für Projekt 1 ein Exposé (PDF, ohne „Baujahr“-Zeile) und eine Bildtabelle (40 × 20 px) an, wie nach dem
+    Upload: Datei unter uploads/1/, Quelle, Dokument, Volltextindex."""
+    import datetime as dt
+    import io
+
+    from pdf_fakes import pdf
+    from PIL import Image
+
+    from mietmarkt.dokumente import indexieren, ordner
+    from mietmarkt.modelle import Dokument, Quelle
+    seiten = [("Musterweg 4, 12345 Musterstadt\nWohnfläche: ca. 72,5 m²\nKaltmiete: 1.250 €\n3-Zimmer-Wohnung\n"
+              "fertiggestellt im Jahr 2024"), "Ausstattung: Balkon nach Süden"]
+    bild = io.BytesIO()
+    Image.new("RGB", (40, 20), (243, 241, 236)).save(bild, "PNG")
+    (ordner(db) / "uploads" / "1").mkdir(parents=True, exist_ok=True)
+    with Session(db) as s:
+        for name, art, inhalt, text in (("expose.pdf", "pdf", pdf(seiten), seiten), ("tabelle.png", "png", bild.getvalue(), [])):
+            (ordner(db) / f"uploads/1/{name}").write_bytes(inhalt)
+            q = Quelle(projekt_id=1, name=name, art="datei", datei=name, abgerufen_am=dt.date(2026, 11, 22))
+            s.add(q)
+            s.flush()
+            d = Dokument(projekt_id=1, quelle_id=q.id, dateiname=name, pfad=f"uploads/1/{name}", art=art,
+                         seiten=len(text), ki_freigabe=freigabe, hochgeladen_am=dt.datetime.now(dt.UTC))
+            s.add(d)
+            s.commit()
+            indexieren(s, d, text)
+        if not freigabe:  # ein Demo-Projekt gibt alles frei; ohne Freigabe muss es ein „echtes“ Projekt sein
+            p = s.get(Projekt, 1)
+            p.demo = False
+            s.add(p)
+            s.commit()
+
+
+@respx.mock
+def test_lauf_mit_unterlagen_expose_vision_und_fundstellen(db):
+    """Mit Unterlagen: Der Mietansatz wartet auf Exposé- und Vision-Agent. Der Parser liest das Exposé, das Modell
+    ergänzt nur das fehlende Baujahr (Herkunft ki, S. 1); der Vision-Agent liest einen Wert ab (abgelesen, mit
+    Ausschnitt), ein Wert außerhalb des Bildes fällt heraus. Die Prüfung findet die Aussage ohne Fundstelle."""
+    geodienste_mocken()
+    unterlagen(db)
+    luecken = ki(json.dumps({"baujahr": {"wert": "2024", "seite": 1, "zitat": "fertiggestellt im Jahr 2024"}}))
+    ablesen = ki(json.dumps({"werte": [
+        {"bezeichnung": "Leerstand", "wert": "2,1", "einheit": "%", "ausschnitt": [10, 5, 20, 8], "diagramm": False},
+        {"bezeichnung": "Erfunden", "wert": "9", "einheit": "%", "ausschnitt": [30, 15, 50, 50], "diagramm": False}]}))
+    m = modelle(
+        stark=[entscheidung("standort"), entscheidung("marktdaten"), entscheidung("mietansatz"), entscheidung("vision"),
+               ablesen, entscheidung("mietansatz"), HERLEITEN, ki("Mietansatz."), befunde("hinweis"), BERICHT],
+        schnell=[ki(werkzeuge=(("lage", {}), ("dokumente_suchen", {"frage": "Balkon"}))),
+                 ki("Balkon nach Süden [Quelle: expose.pdf, S. 2]."),
+                 ki(werkzeuge=(("kennzahlen", {}), ("dokumente_suchen", {"frage": "Kaltmiete"}))),
+                 ki("Die Kaltmiete im Exposé beträgt 1.250 €."), luecken])
+    z = laufen(graph(m, db), startzustand(1))
+    assert [e["naechster"] for e in z["entscheidungen"]] == ["standort", "marktdaten", "expose", "vision", "mietansatz"]
+    assert "Leitplanke" in z["entscheidungen"][2]["begruendung"]
+    expose = z["ergebnisse"]["expose"]["werkzeuge"][0]["ergebnis"]["dokumente"][0]
+    assert expose["felder"]["wohnflaeche"]["herkunft"] == "import" and expose["felder"]["kaltmiete"]["wert"] == 1250
+    assert (expose["felder"]["baujahr"]["herkunft"], expose["felder"]["baujahr"]["fundstelle"]) == ("ki", "S. 1")
+    assert "[Quelle: expose.pdf, S. 1]" in z["ergebnisse"]["expose"]["text"]
+    werte = z["ergebnisse"]["vision"]["werkzeuge"][0]["ergebnis"]["dokumente"][0]["werte"]
+    assert [(w["wert"], w["herkunft"], w["ausschnitt"]) for w in werte] == [(2.1, "abgelesen", [10, 5, 20, 8])]
+    fund = [b for b in z["pruefungen"][-1] if b["pruefung"] == "fundstelle"]
+    assert len(fund) == 1 and "(marktdaten)" in fund[0]["text"] and "ohne Fundstelle" in fund[0]["text"]
+    # Expose (schnell), Vision (stark) werden gebucht
+    assert {k["agent"] for k in z["kosten"]} >= {"expose", "vision"}
+
+
+def test_unterlagen_ohne_freigabe_bleiben_lokal(db):
+    """Ohne KI-Freigabe sieht das Modell die Unterlagen nicht: keine Suchtreffer, nur der Hinweis, und der
+    Supervisor muss weder Exposé- noch Vision-Agent einbinden."""
+    unterlagen(db, freigabe=False)
+    w = next(t for t in werkzeuge(db, KONFIG)["standort"] if t.name == "dokumente_suchen")
+    aus = json.loads(w.invoke({"projekt_id": 1, "frage": "Balkon"}))
+    assert aus["treffer"] == [] and aus["zurueckgehalten"] == {"dokumente": 2}
+    m = modelle(stark=[entscheidung("vision"), entscheidung("fertig", rueckfrage="Unterlagen freigeben?")],
+                schnell=[ki("Standort.")])
+    z = laufen(graph(m, db), startzustand(1))
+    assert z["entscheidungen"][0]["naechster"] == "standort" and "keine Unterlagen" in z["entscheidungen"][0]["begruendung"]

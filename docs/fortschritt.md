@@ -114,3 +114,19 @@
 - **S5** Der Portal-Filter lässt bei Demo-Projekten alle Einträge durch. Heute kein Weg dahin (kein Import-
   Endpunkt); ein künftiger Import muss Demo-Projekte sperren oder je Eintrag filtern.
 - Offen: Freigabe-Karte, Antwortfeld und Zeitleiste im Frontend.
+
+## M6 – Eigene Unterlagen (22.11.2026)
+- Upload `POST /api/projekte/{id}/dokumente` (PDF, PNG/JPG, Text; Typ am Inhalt, 10 MB bzw. Bilder 5 MB, Pillow
+  prüft Bilder, höchstens 100 PDF-Seiten), Ablage `daten/uploads/<projekt>/<zufall>.<art>`, je Dokument eine Quelle.
+  Je Dokument `ki_freigabe` (Standard aus), sonst wie Portal-Daten nur lokal.
+- RAG: Abschnitte von rund 800 Zeichen mit Überlappung in SQLite FTS5 (`abschnitt`), Werkzeug `dokumente_suchen`
+  mit Datei, Seite, Ausschnitt; Fragen werden nie als FTS5-Syntax ausgewertet.
+- Exposé-Agent (Parser mit pdfplumber und Regex, Modell nur für leere Felder, Zitat am Text geprüft) und
+  Vision-Agent (Bildeingabe, Herkunft abgelesen mit Ausschnitt); Supervisor-Leitplanke: beide vor dem Mietansatz,
+  wenn passende Unterlagen freigegeben sind. MAX_RUNDEN 8.
+- Prüfung: Befund `fundstelle` für Aussagen aus Treffern ohne `[Quelle: Datei, S. X]` und für falsche Fundstellen.
+- Behoben nebenbei: Kosten-Wert wurde als Enum im Checkpoint gespeichert (jetzt JSON, strikter Modus grün).
+- Tests: Backend 209 (+1 Live-Test). Neue Abhängigkeiten: pdfplumber, pillow, python-multipart.
+- Entschieden (22.11.2026): `ki_freigabe` bleibt standardmäßig aus.
+- Offen: Upload und Dokumentliste im Frontend – das Häkchen `ki_freigabe` sichtbar beim Upload, mit dem Hinweis, dass das Dokument dann bei einem Lauf an Anthropic geht; Liste/Löschen von Dokumenten per API; Exposé-Werte als Comps
+  übernehmen (nur über Freigabe); Live-Lauf mit OSRM/Haversine, sobald overpass-api.de wieder erreichbar ist.

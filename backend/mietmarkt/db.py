@@ -25,4 +25,12 @@ def engine(pfad: Path | None = None) -> Engine:
     pfad.parent.mkdir(parents=True, exist_ok=True)
     e = create_engine(f"sqlite:///{pfad}")
     SQLModel.metadata.create_all(e)
+    with e.begin() as c:
+        c.exec_driver_sql(FTS_TABELLE)
     return e
+
+
+# Volltextindex der Unterlagen (SQLite FTS5, kein Embedding-Dienst). SQLModel kennt keine virtuellen Tabellen,
+# daher von Hand. unicode61 remove_diacritics: „Wohnflache“ findet „Wohnfläche“; UNINDEXED-Spalten nur zum Filtern.
+FTS_TABELLE = ("CREATE VIRTUAL TABLE IF NOT EXISTS abschnitt USING fts5(text, dokument_id UNINDEXED, "
+               "projekt_id UNINDEXED, seite UNINDEXED, tokenize='unicode61 remove_diacritics 2')")

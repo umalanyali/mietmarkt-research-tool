@@ -25,6 +25,8 @@ class Wert(BaseModel):
     herkunft: Herkunft
     quelle_id: int | None = None
     rechenweg_text: str = ""
+    fundstelle: str = ""  # Stelle in einer Unterlage des Nutzers, z. B. „S. 2“
+    ausschnitt: list[int] | None = None  # bei Werten aus Bildern: [x, y, Breite, Höhe] in Pixeln
 
 
 class ProjektBasis(SQLModel):
@@ -131,6 +133,22 @@ class Wohnung(SQLModel, table=True):
     zimmer: float
     wohnflaeche: float  # je Wohnung in m²
     anzahl: int
+
+
+class Dokument(SQLModel, table=True):
+    """Eine vom Nutzer hochgeladene Unterlage (PDF, Bild, Text). Die Datei liegt unter daten/uploads/, nie im Repo."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    projekt_id: int = Field(foreign_key="projekt.id", index=True)
+    quelle_id: int | None = Field(default=None, foreign_key="quelle.id")  # für Fußnoten „Quelle: …“
+    dateiname: str  # Originalname, nur zur Anzeige (bereinigt); gespeichert wird unter einem zufälligen Namen
+    pfad: str  # relativ zum Datenordner, z. B. uploads/1/3f2a….pdf
+    art: str  # pdf | png | jpg | txt (am Inhalt erkannt)
+    seiten: int = 0
+    # Darf an die KI? Hochgeladene Unterlagen können Portal-Inhalte sein (z. B. Exposés); ohne Freigabe und ohne
+    # KI_PORTALDATEN_SENDEN bleiben sie lokal (wie importierte Portal-Daten)
+    ki_freigabe: bool = False
+    hochgeladen_am: dt.datetime
 
 
 class Lauf(SQLModel, table=True):

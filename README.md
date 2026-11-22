@@ -52,6 +52,7 @@ Optional: `.env.example` nach `.env` kopieren und `ANTHROPIC_API_KEY` eintragen 
 | `GET /api/laeufe/{lauf_id}/ereignisse` | Lauf ausführen bzw. fortsetzen, Ereignisse als Server-Sent Events (siehe unten) |
 | `POST /api/laeufe/{lauf_id}/freigabe` | Mietansatz freigeben: `{aktion: annehmen \| aendern \| ablehnen, aenderungen?: {regel_eg?, dg?}, kommentar?}`; streamt weiter |
 | `POST /api/laeufe/{lauf_id}/antwort` | Rückfrage des Supervisors beantworten: `{antwort}`; streamt weiter |
+| `POST /api/projekte/{id}/dokumente` | Eigene Unterlage hochladen (Formular: `datei`, `ki_freigabe`): PDF, PNG/JPG, Text; höchstens 10 MB (Bilder 5 MB), Typ am Inhalt erkannt; Ablage unter `daten/uploads/` |
 | `GET /api/laeufe/{lauf_id}/bericht.md` / `.pptx` | Bericht eines fertigen Laufs als Markdown oder PowerPoint |
 | `GET /api/gesundheit` | Lebenszeichen; `ki: true/false`, ob ein Anthropic-Schlüssel eingetragen ist |
 
@@ -82,7 +83,7 @@ Antworten des Nutzers gelten bei der Zahlenprüfung als belegt.
   zwischen Projekt und Comps; ohne belegten Unterschied kein Merkmal (Prompt-Regel, nicht maschinell prüfbar).
 - **Leitplanken im Code:** „fertig“ ohne Rückfrage erst, wenn alle drei Agenten erledigt sind (Mietansatz erst mit
   Freigabe), Mietansatz erst nach Standort und Marktdaten, Zu-/Abschläge höchstens ±10 €/m² und höchstens 10 je
-  Herleitung (Name 80, Begründung 500 Zeichen), höchstens 6 Supervisor-Runden (danach Abbruch ohne Bericht, die
+  Herleitung (Name 80, Begründung 500 Zeichen), höchstens 8 Supervisor-Runden (danach Abbruch ohne Bericht, die
   siebte Runde wird nicht mehr bezahlt).
 - **Mietansatz:** je Basis eine Herleitung (`regel_eg` Pflicht, `dg` Pflicht, wenn der Wohnungsmix DG-Wohnungen hat;
   fehlt eine, schickt der Code den Agenten einmal mit Hinweis zurück). Jede Herleitung wird bis zum
@@ -109,6 +110,20 @@ Antworten des Nutzers gelten bei der Zahlenprüfung als belegt.
   Kennzahlen erscheinen mit ihren eigenen Nachkommastellen. Der Markdown-Export maskiert nur, was wirken würde (Links,
   Bilder, HTML, Backticks) in Modell- und Importtext und erklärt `[?]` sowie gestrichene Aussagen.
   Export als Markdown und PowerPoint (`backend/mietmarkt/export.py`, Sand/Stein/Oliv, ohne Logo).
+- **Unterlagen (RAG):** Hochgeladene Texte werden seitenweise in Abschnitte von rund 800 Zeichen mit Überlappung
+  geteilt und in SQLite FTS5 indexiert (Tabelle `abschnitt`, kein Embedding-Dienst). Das Werkzeug
+  `dokumente_suchen` (Standort, Marktdaten, Mietansatz) liefert Datei, Seite und Ausschnitt; Aussagen daraus
+  belegen die Agenten mit `[Quelle: Datei, S. X]`. Die Prüfung meldet im Code Sätze, die erkennbar aus Treffern
+  stammen (vier gleiche Wörter in Folge oder eine Zahl, die nur dort steht), aber keine Fundstelle haben, und
+  Fundstellen, die in keinem Treffer vorkommen (Befund `fundstelle`).
+- **Exposé-Agent** (`MODELL_SCHNELL`): Ein Parser liest Wohnfläche, Kaltmiete, Zimmer, Baujahr und Ausstattung
+  (Herkunft `import`, Seite). Nur leer gebliebene Felder ergänzt das Modell mit Seite und wörtlichem Zitat; Python
+  prüft das Zitat am Text und die Zahl im Zitat, sonst wird die Ergänzung verworfen (Herkunft `ki`).
+- **Vision-Agent** (`MODELL_STARK`): liest Tabellen und Diagramme aus hochgeladenen Bildern; jeder Wert trägt
+  Herkunft `abgelesen` und den Bildausschnitt `[x, y, Breite, Höhe]`; Werte aus Diagrammen erscheinen als „rd.“.
+  Werte ohne Zahl oder mit Ausschnitt außerhalb des Bildes fallen heraus. Kein Abruf von Webseiten.
+- **Supervisor:** Mit freigegebenen Unterlagen sind Exposé- (PDF/Text) bzw. Vision-Agent (Bilder) Pflicht vor dem
+  Mietansatz; ohne passende Unterlagen werden sie nicht aufgerufen.
 - **Kosten:** Token je Aufruf aus `usage_metadata` × Preistabelle (`agenten/kosten.py`) × `KI_EUR_JE_USD`. Erreicht ein
   Lauf `KI_BUDGET_EUR_PRO_LAUF` (Standard 0,50 €), startet kein weiterer Modellaufruf; der letzte Aufruf kann das
   Budget also noch etwas überschreiten. Modelle ohne Eintrag in der Preistabelle werden vor jedem Aufruf abgelehnt.
@@ -194,7 +209,11 @@ echten Adressen.
   Freigabe sehen die Agenten deshalb nur Demo-Daten, selbst erfasste Werte (Herkunft `manuell`) und das Umfeld aus
   OpenStreetMap – auch Kennzahlen und Mietansatz werden dann nur daraus berechnet, und das Werkzeug meldet dem
   Agenten, wie viele Einträge zurückgehalten wurden. Freigabe auf eigene Verantwortung: `KI_PORTALDATEN_SENDEN=true`.
-- Ab M5 kommen Screenshot-Bilder zur Auslese und Exposé-Text hinzu, wenn der Parser Felder leer lässt.
+- **Hochgeladene Unterlagen gehen nur mit Freigabe an Anthropic.** Sie können Portal-Inhalte sein (z. B.
+  Exposés). Ohne das Häkchen `ki_freigabe` beim Hochladen (und ohne `KI_PORTALDATEN_SENDEN=true`) werden sie nur
+  lokal gespeichert und indexiert; die Agenten sehen sie nicht, sondern nur, wie viele zurückgehalten wurden. Mit
+  Freigabe gehen bei einem Lauf Suchtreffer (Textausschnitte), der Text von Exposés mit leeren Feldern (an das
+  schnelle Modell) und die Bilder selbst (an das starke Modell) an Anthropic.
 
 Kartendaten und Umfeld © OpenStreetMap-Mitwirkende (ODbL), Kacheln OpenFreeMap / OpenMapTiles, Routing FOSSGIS.
 Schrift: Hanken Grotesk (SIL Open Font License).
