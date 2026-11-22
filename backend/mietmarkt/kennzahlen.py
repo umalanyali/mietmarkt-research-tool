@@ -114,6 +114,14 @@ def zusammenfassung(comps: list[Comp], stichtag: dt.date) -> dict[str, Wert]:
     }
 
 
+def comps_kennzahlen(comps: list[Comp], stichtag: dt.date) -> dict[str, Wert]:
+    """Alle Comps-Kennzahlen auf einen Blick (für API und Agenten-Werkzeuge).
+
+    Eingabe: Comps, Stichtag. Ausgabe: zusammenfassung() und kennzahlen_eur_qm() in einem dict.
+    """
+    return {**zusammenfassung(comps, stichtag), **kennzahlen_eur_qm(comps)}
+
+
 class Preisklassen(BaseModel):
     """Auswertung einer Preisklassen-Verteilung."""
 

@@ -1,9 +1,10 @@
 """Auswahl von Vergleichsangeboten nach Radius, Baujahr und Typ, mit nachvollziehbarem Rechenweg."""
 from pydantic import BaseModel
+from sqlmodel import Session, select
 
 from .format import de
 from .geo import entfernung_km
-from .modelle import Comp
+from .modelle import Comp, Projekt
 
 
 class Auswahl(BaseModel):
@@ -38,3 +39,13 @@ def filtern(comps: list[Comp], *, zentrum: tuple[float, float] | None = None, ra
         nrn = ", ".join(f"Nr. {c.nr}" for c in raus)
         schritte.append(f"{name}: {len(rest)} übrig" + (f" (ausgeschlossen: {nrn})" if raus else ""))
     return Auswahl(comps=rest, rechenweg_text="; ".join(schritte))
+
+
+def im_umkreis(s: Session, p: Projekt) -> list[Comp]:
+    """Alle Comps im Umkreis des Projekts, egal zu welchem Projekt sie importiert wurden – aber nur aus Projekten
+    derselben Art: Demo-Projekte sehen Demo-Comps, echte Adressen nie (die Demo-Kartenlage ist nur Kulisse).
+
+    Eingabe: Sitzung, Projekt. Ausgabe: Comps nach Nummer sortiert. Marktdaten gibt es nur, wo Daten im Umkreis liegen.
+    """
+    alle = s.exec(select(Comp).join(Projekt).where(Projekt.demo == p.demo).order_by(Comp.nr)).all()
+    return filtern(list(alle), zentrum=(p.lat, p.lon), radius_km=p.umkreis_km).comps

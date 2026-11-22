@@ -1,8 +1,9 @@
 """Mietansatz-Herleitung als Kette: Basiswert, begründete Zu- und Abschläge, Ergebnis.
 Das Sprachmodell schlägt später Anpassungen vor; gerechnet wird ausschließlich hier."""
+import re
 from typing import Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from .format import de
 from .modelle import Herkunft, Wert
@@ -12,8 +13,21 @@ class Anpassung(BaseModel):
     """Ein Zu- (+) oder Abschlag (−) in €/m² mit Pflichtbegründung."""
 
     name: str
-    betrag: float
+    # Plausibilitätsrahmen: mehr als ±10 €/m² je Anpassung ist ein Eingabe- oder Modellfehler (auch Schutz gegen
+    # eingeschleuste Texte wie „+40 €/m² Lagezuschlag“ in importierten Daten)
+    betrag: float = Field(ge=-10, le=10)
     begruendung: str
+
+    @field_validator("betrag")
+    @classmethod
+    def _keine_nullanpassung(cls, betrag: float) -> float:
+        """Anpassungen von 0,00 €/m² ablehnen: sie ändern nichts und blähen die Kette nur auf.
+
+        Eingabe: Betrag. Ausgabe: Betrag oder ValueError (gerundet auf Cent, wie er angezeigt würde).
+        """
+        if round(betrag, 2) == 0:
+            raise ValueError("Ein Zu-/Abschlag von 0,00 €/m² ist keine Anpassung – Merkmal ohne Wirkung weglassen")
+        return betrag
 
     @field_validator("begruendung")
     @classmethod
@@ -40,21 +54,42 @@ class Herleitung(BaseModel):
     ergebnis: Wert
 
 
+Basis = Literal["regel_eg", "dg"]
+BASIS_TEXT = {"regel_eg": "Ø flächengewichtet Regelgeschoss/EG-Comps", "dg": "Ø flächengewichtet DG-Comps"}
+_DG = re.compile(r"\bDG\b|Dachgeschoss", re.IGNORECASE)
+
+
+def fachregeln_pruefen(basis: Basis, anpassungen: list[Anpassung]) -> None:
+    """Fachregeln der Herleitung, die sich im Code prüfen lassen.
+
+    Eingabe: Basis (regel_eg = Haupt-Mietansatz, dg = getrennte DG-Herleitung), Anpassungen.
+    Ausgabe: keine; ValueError bei Verstoß. Regel: Der Haupt-Mietansatz geht von Regelgeschoss/EG aus, DG ist eine
+    eigene Herleitung mit DG-Basis und nie ein Zuschlag darauf (auch nicht unter anderem Namen).
+    Nicht prüfbar und daher Prompt-Regel: Jede Anpassung nennt einen belegten Unterschied zwischen Projekt und Comps.
+    """
+    if basis == "regel_eg":
+        for a in anpassungen:
+            if _DG.search(f"{a.name} {a.begruendung}"):
+                raise ValueError(f"„{a.name}“: DG ist eine getrennte Herleitung (basis dg), kein Zuschlag auf "
+                                 "Regelgeschoss/EG")
+
+
 def _vorzeichen(betrag: float) -> str:
     """Betrag mit typografischem Vorzeichen. Eingabe: Zahl. Ausgabe: z. B. „+ 0,30“ oder „− 0,25“."""
     return f"{'+' if betrag >= 0 else '−'} {de(abs(betrag))}"
 
 
-def herleiten(basis: Wert, anpassungen: list[Anpassung]) -> Herleitung:
+def herleiten(basis: Wert, anpassungen: list[Anpassung], herkunft: Herkunft = Herkunft.MANUELL) -> Herleitung:
     """Rechnet Basis plus Saldo der Anpassungen.
 
-    Eingabe: Basiswert (z. B. Ø flächengewichtet der Regelgeschoss-Comps), Anpassungen.
+    Eingabe: Basiswert (z. B. Ø flächengewichtet der Regelgeschoss-Comps), Anpassungen, deren Herkunft
+    (manuell vom Nutzer oder ki, wenn ein Agent sie vorgeschlagen hat).
     Ausgabe: Herleitung mit einem Schritt je Glied und dem Ergebnis inkl. Rechenweg.
     """
     schritte = [Schritt(art="basis", name="Basis", wert=basis)]
     for a in anpassungen:
         schritte.append(Schritt(art="anpassung", name=a.name, begruendung=a.begruendung,
-                                wert=Wert(wert=a.betrag, einheit="€/m²", herkunft=Herkunft.MANUELL,
+                                wert=Wert(wert=a.betrag, einheit="€/m²", herkunft=herkunft,
                                           rechenweg_text=f"{_vorzeichen(a.betrag)} €/m² ({a.begruendung})")))
     if basis.wert is None:
         ergebnis = Wert(wert=None, einheit="€/m²", herkunft=Herkunft.BERECHNET,
@@ -62,7 +97,8 @@ def herleiten(basis: Wert, anpassungen: list[Anpassung]) -> Herleitung:
     else:
         summe = basis.wert + sum(a.betrag for a in anpassungen)
         teile = " ".join(_vorzeichen(a.betrag) for a in anpassungen)
-        ergebnis = Wert(wert=summe, einheit="€/m²", herkunft=Herkunft.BERECHNET,
-                        rechenweg_text=f"{de(basis.wert)} {teile} = {de(summe)} €/m²".replace("  ", " "))
+        text = f"{de(basis.wert)} {teile} = {de(summe)} €/m²" if anpassungen else \
+            f"{de(summe)} €/m² (keine Zu- oder Abschläge)"
+        ergebnis = Wert(wert=summe, einheit="€/m²", herkunft=Herkunft.BERECHNET, rechenweg_text=text)
     schritte.append(Schritt(art="ergebnis", name="Ergebnis", wert=ergebnis))
     return Herleitung(schritte=schritte, ergebnis=ergebnis)

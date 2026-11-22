@@ -118,3 +118,13 @@ class GeoCache(SQLModel, table=True):
     anfrage_hash: str = Field(index=True)
     antwort_json: str
     abgerufen_am: dt.datetime
+
+
+class Lauf(SQLModel, table=True):
+    """Ein Agenten-Lauf zu einem Projekt. Zwischenstände und Ergebnisse liegen im LangGraph-Checkpointer
+    (daten/checkpoints.db) unter thread_id = id; diese Tabelle ordnet den Lauf nur dem Projekt zu."""
+
+    id: str = Field(primary_key=True)
+    projekt_id: int = Field(foreign_key="projekt.id", index=True)
+    gestartet_am: dt.datetime
+    ergebnis: str | None = None  # Endstand (Ereignis „fertig“ als JSON); danach wird der Checkpoint gelöscht

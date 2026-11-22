@@ -1,17 +1,26 @@
 """FastAPI-Anwendung. Die Endpunkte lesen aus der Datenbank und reichen Berechnungen an das Fachpaket `mietmarkt` weiter."""
 import datetime as dt
-from collections.abc import Iterator
+import json
+import logging
+import uuid
+from collections.abc import AsyncIterator, Iterator
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse, StreamingResponse
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from mietmarkt import __version__
-from mietmarkt.comps import filtern
-from mietmarkt.db import engine
+from mietmarkt.agenten.ereignisse import ereignisse
+from mietmarkt.agenten.graph import baue_graph, lauf_konfig, startzustand
+from mietmarkt.agenten.modelle import Modelle, aus_konfig
+from mietmarkt.comps import im_umkreis
+from mietmarkt.db import datenbankpfad, engine
 from mietmarkt.geo import entfernung_km
 from mietmarkt.geo.dienste import (
     ATTRIBUTION,
@@ -25,15 +34,18 @@ from mietmarkt.geo.umfeld import Umfeld, umfeld
 from mietmarkt.kennzahlen import (
     Preisklassen,
     anfragen_je_monat,
+    comps_kennzahlen,
     eur_qm,
-    kennzahlen_eur_qm,
     preisklassen_auswertung,
     tage_online,
-    zusammenfassung,
 )
-from mietmarkt.modelle import Comp, CompBasis, Marktkennzahl, Projekt, ProjektBasis, Quelle, Wert
+from mietmarkt.konfig import Konfig
+from mietmarkt.modelle import CompBasis, Lauf, Marktkennzahl, Projekt, ProjektBasis, Quelle, Wert
 
 app = FastAPI(title="Mietmarkt Research", version=__version__)
+# Nur Anfragen an localhost: schützt vor DNS-Rebinding (eine fremde Domain, die auf 127.0.0.1 zeigt)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])
+logger = logging.getLogger("mietmarkt.laeufe")
 
 
 @app.exception_handler(RequestValidationError)
@@ -63,16 +75,6 @@ def _projekt(s: Session, projekt_id: int) -> Projekt:
     if projekt is None:
         raise HTTPException(status_code=404, detail=f"Projekt {projekt_id} nicht gefunden")
     return projekt
-
-
-def _comps_im_umkreis(s: Session, p: Projekt) -> list[Comp]:
-    """Alle Comps im Umkreis des Projekts, egal zu welchem Projekt sie importiert wurden – aber nur aus Projekten
-    derselben Art: Demo-Projekte sehen Demo-Comps, echte Adressen nie (die Demo-Kartenlage ist nur Kulisse).
-
-    Eingabe: Sitzung, Projekt. Ausgabe: Comps nach Nummer sortiert. Marktdaten gibt es nur, wo Daten im Umkreis liegen.
-    """
-    alle = s.exec(select(Comp).join(Projekt).where(Projekt.demo == p.demo).order_by(Comp.nr)).all()
-    return filtern(list(alle), zentrum=(p.lat, p.lon), radius_km=p.umkreis_km).comps
 
 
 def _dienst_fehler(e: DienstNichtErreichbar) -> HTTPException:
@@ -113,10 +115,28 @@ class KennzahlenAus(BaseModel):
     preisklassen: Preisklassen
 
 
+def konfig() -> Konfig:
+    """Einstellungen aus .env, je Anfrage neu gelesen (Schlüssel nachtragen wirkt ohne Neustart). Ausgabe: Konfig."""
+    return Konfig()
+
+
+KonfigDep = Annotated[Konfig, Depends(konfig)]
+
+
+def ki_modelle(k: KonfigDep) -> Modelle | None:
+    """Claude-Modelle laut Konfig. Eingabe: Konfig. Ausgabe: Modelle, oder None ohne Schlüssel/Preis (kein Absturz)."""
+    return None if k.ki_problem else aus_konfig(k)
+
+
+def checkpoint_pfad() -> Path:
+    """Datei des LangGraph-Checkpointers neben der Datenbank. Ausgabe: Pfad (daten/checkpoints.db)."""
+    return datenbankpfad().parent / "checkpoints.db"
+
+
 @app.get("/api/gesundheit")
-def gesundheit() -> dict[str, str]:
-    """Lebenszeichen für Startskript und Tests. Eingabe: keine. Ausgabe: {"status": "ok", "version": …}."""
-    return {"status": "ok", "version": __version__}
+def gesundheit(k: KonfigDep) -> dict[str, str | bool]:
+    """Lebenszeichen für Startskript und Tests. Eingabe: keine. Ausgabe: status, version und ob die KI eingerichtet ist."""
+    return {"status": "ok", "version": __version__, "ki": k.ki_konfiguriert}
 
 
 @app.get("/api/projekte")
@@ -188,7 +208,7 @@ def comps(projekt_id: int, s: Sitzung) -> list[CompAus]:
     """
     p = _projekt(s, projekt_id)
     ergebnis = []
-    for c in _comps_im_umkreis(s, p):
+    for c in im_umkreis(s, p):
         ergebnis.append(CompAus(
             **c.model_dump(),
             eur_qm=eur_qm(c),
@@ -207,11 +227,101 @@ def kennzahlen(projekt_id: int, s: Sitzung) -> KennzahlenAus:
     """
     p = _projekt(s, projekt_id)
     werte = list(s.exec(select(Marktkennzahl).where(Marktkennzahl.projekt_id == p.id).order_by(Marktkennzahl.id)).all())
-    alle_comps = _comps_im_umkreis(s, p)
+    alle_comps = im_umkreis(s, p)
     klassen = [(k.kategorie, k.wert) for k in werte if k.gruppe == "preisklassen"]
     return KennzahlenAus(
         kennzahlen=werte,
         quellen=list(s.exec(select(Quelle).where(Quelle.projekt_id == p.id).order_by(Quelle.id)).all()),
-        comps={**zusammenfassung(alle_comps, p.stichtag), **kennzahlen_eur_qm(alle_comps)},
+        comps=comps_kennzahlen(alle_comps, p.stichtag),
         preisklassen=preisklassen_auswertung(klassen),
     )
+
+
+@app.post("/api/projekte/{projekt_id}/laeufe", status_code=201)
+def lauf_starten(projekt_id: int, s: Sitzung, k: KonfigDep) -> dict[str, str]:
+    """Legt einen Agenten-Lauf an; er beginnt, sobald jemand seine Ereignisse abruft.
+
+    Eingabe: Projekt-ID. Ausgabe: {"lauf_id": …}. 404 ohne Projekt, 503 ohne Anthropic-Schlüssel.
+    """
+    _projekt(s, projekt_id)
+    if k.ki_problem:
+        raise HTTPException(status_code=503, detail=k.ki_problem)
+    lauf = Lauf(id=uuid.uuid4().hex, projekt_id=projekt_id, gestartet_am=dt.datetime.now(dt.UTC))
+    s.add(lauf)
+    s.commit()
+    return {"lauf_id": lauf.id}
+
+
+# Läufe, deren Ereignisstrom gerade läuft. Ein zweiter Abruf desselben Laufs (Tab, Neuverbindung) bekäme sonst
+# denselben Checkpoint und würde jeden Modellaufruf ein zweites Mal bezahlen. Ein Prozess (uvicorn) genügt dafür.
+aktive_laeufe: set[str] = set()
+
+
+def _sse(ereignis: dict) -> str:
+    """Ein Ereignis im Server-Sent-Events-Format. Eingabe: dict mit "typ". Ausgabe: Textblock."""
+    return f"event: {ereignis['typ']}\ndata: {json.dumps(ereignis, ensure_ascii=False, default=str)}\n\n"
+
+
+@app.get("/api/laeufe/{lauf_id}/ereignisse")
+async def lauf_ereignisse(lauf_id: str, s: Sitzung, k: KonfigDep, m: Annotated[Modelle | None, Depends(ki_modelle)],
+                          pfad: Annotated[Path, Depends(checkpoint_pfad)]) -> StreamingResponse:
+    """Führt den Lauf aus und streamt seine Ereignisse (Server-Sent Events), zum Schluss „fertig“ mit Endstand.
+
+    Eingabe: Lauf-ID. Ausgabe: text/event-stream. Ein neuer Lauf startet, ein unterbrochener (Absturz, Neustart,
+    abgerissene Verbindung) wird am letzten Checkpoint fortgesetzt, ein beendeter liefert nur den Endstand.
+    """
+    lauf = s.get(Lauf, lauf_id)
+    if lauf is None:
+        raise HTTPException(status_code=404, detail=f"Lauf {lauf_id} nicht gefunden")
+    if lauf.ergebnis:  # beendet: Endstand aus der Tabelle, ohne Modell und ohne Schlüssel
+        return StreamingResponse(iter([_sse(json.loads(lauf.ergebnis))]), media_type="text/event-stream")
+    if m is None:
+        raise HTTPException(status_code=503, detail=k.ki_problem)
+    if lauf_id in aktive_laeufe:
+        raise HTTPException(status_code=409, detail="Dieser Lauf läuft bereits")
+    e, projekt_id = s.get_bind(), lauf.projekt_id  # die Sitzung endet vor dem Strom; die Engine bleibt
+    # Eintragen ohne await dazwischen: zwei gleichzeitige Anfragen können nicht beide durch die Prüfung kommen
+    aktive_laeufe.add(lauf_id)
+
+    async def strom() -> AsyncIterator[str]:
+        """Erzeugt die SSE-Blöcke und gibt den Lauf am Ende wieder frei. Ausgabe: Text je Ereignis."""
+        try:
+            async for block in _ablauf():
+                yield block
+        finally:
+            aktive_laeufe.discard(lauf_id)
+
+    async def _ablauf() -> AsyncIterator[str]:
+        """Führt den Graphen aus bzw. fort. Ausgabe: Text je Ereignis."""
+        async with AsyncSqliteSaver.from_conn_string(str(pfad)) as cp:
+            graph, konf = baue_graph(m, e, k, cp), lauf_konfig(lauf_id)
+            stand = await graph.aget_state(konf)
+            # stand.values leer: noch nie gelaufen; stand.next nicht leer: mittendrin unterbrochen
+            if not stand.values or stand.next:
+                eingabe = None if stand.values else startzustand(projekt_id)
+                try:
+                    async for modus, daten in graph.astream(eingabe, konf, stream_mode=["updates", "messages"]):
+                        for ereignis in ereignisse(modus, daten):
+                            yield _sse(ereignis)
+                except Exception as f:  # jeder Fehler wird gemeldet; der Lauf lässt sich später fortsetzen
+                    # Details (evtl. Pfade, Antwortkörper) nur ins lokale Log; der Browser bekommt eine feste Meldung
+                    logger.exception("Lauf %s unterbrochen", lauf_id)
+                    yield _sse({"typ": "fehler", "meldung": f"Lauf unterbrochen ({type(f).__name__}). Erneuter Abruf "
+                                                            "setzt ihn am letzten Schritt fort; Details im Server-Log."})
+                    return
+            ende = (await graph.aget_state(konf)).values
+            schluss = {"typ": "fertig", "status": "abgebrochen" if ende.get("abbruch") else "fertig",
+                       "abbruch": ende.get("abbruch"), "offene_rueckfragen": ende["offene_rueckfragen"],
+                       "kosten_eur": sum(x["eur"]["wert"] for x in ende["kosten"]),
+                       "ergebnisse": {a: {"text": r["text"], "markierungen": r["markierungen"]}
+                                      for a, r in ende["ergebnisse"].items()}}
+            # Erst speichern, dann senden (bricht die Verbindung beim Senden ab, ist der Endstand trotzdem da).
+            # Danach wird der Checkpoint nicht mehr gebraucht; so wächst checkpoints.db nicht mit jedem Lauf.
+            with Session(e) as s2:
+                beendet = s2.get(Lauf, lauf_id)
+                beendet.ergebnis = json.dumps(schluss, ensure_ascii=False, default=str)
+                s2.commit()
+            await cp.adelete_thread(lauf_id)
+            yield _sse(schluss)
+
+    return StreamingResponse(strom(), media_type="text/event-stream")

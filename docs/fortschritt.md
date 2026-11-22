@@ -39,3 +39,26 @@
 - python-reviewer und security-reviewer: alle Befunde behoben (u. a. Vite 5.4.21 ohne CORS, OSRM-null → Luftlinie,
   gleichzeitige Anfragen nur einmal, Overpass-Abbruch nicht gecacht, Eingabegrenzen, Drossel threadsicher).
 - Tests: Backend 83, Frontend 11 (externe Dienste nur gemockt, Testadressen fiktiv). README-Abschnitt „Externe Dienste“.
+
+## M5a – Agenten-Gerüst mit LangGraph (22.11.2026)
+- `backend/mietmarkt/agenten/`: Zustand, Werkzeuge (nur Fachfunktionen, Ergebnisse mit Herkunft), Graph mit Supervisor
+  (strukturierte Ausgabe, Leitplanken im Code), Standort-, Marktdaten- und Mietansatz-Agent, Zahlenprüfung,
+  Kosten je Aufruf mit Budgetabbruch, Checkpointer `daten/checkpoints.db`.
+- Konfiguration über `.env` (pydantic-settings); ohne Schlüssel „KI nicht konfiguriert“ statt Absturz.
+- API: `POST /api/projekte/{id}/laeufe`, `GET /api/laeufe/{lauf_id}/ereignisse` (SSE); Tabelle `lauf`.
+- Fachlogik aus der API ins Paket verschoben: `comps.im_umkreis`, `kennzahlen.comps_kennzahlen`.
+- Tests: Backend 101 (+1 Live-Test, nur mit `-m live`), Frontend 11.
+- Standort-Agent nutzt Projektkoordinaten aus der DB (Werkzeug `lage`), geokodiert nicht mehr.
+- Reviews behoben: Modell ohne Preis vorab abgelehnt; 409 bei doppeltem Abruf; „fertig“ nur mit Rückfrage;
+  Zahlenprüfung (Koordinaten/Nummern kein Beleg, kaufmännisch gerundet, Vorzeichen, Fehlerantworten kein Beleg,
+  Zwischentexte geprüft); TrustedHost; Zu-/Abschläge ±10 €/m²; Endstand in Tabelle `lauf`, Checkpoint gelöscht;
+  feste Fehlermeldung; Portal-Daten nur mit `KI_PORTALDATEN_SENDEN=true` an Anthropic.
+- Zahlenprüfung auch für Begründung, Auftrag und Rückfrage des Supervisors; Zu-/Abschläge von 0,00 €/m² abgelehnt.
+- Mietansatz: Basis nur noch `regel_eg` (Haupt-Mietansatz) oder `dg` (getrennte Herleitung); DG als Zuschlag wird
+  abgelehnt; Prompt verlangt belegte Unterschiede Projekt ↔ Comps.
+- Tests: Backend 129 (+1 Live-Test).
+- Offen: Zeitleiste im Frontend (SSE anzeigen). **Hinweis dafür (security-review):** Agenten antworten in Markdown
+  (Tabellen, Fettschrift). Texte nur als reinen Text oder mit einem Markdown-Renderer ohne HTML und ohne automatisch
+  ladende Bilder/Links anzeigen – nie `dangerouslySetInnerHTML`. Sonst bekäme eine Prompt-Injection (z. B. über
+  OSM-Namen oder Importtexte) einen Kanal nach außen (Bild-URL mit Daten als Parameter). Markierte Zahlen
+  (`markierungen`, Herkunft ki) sichtbar kennzeichnen, auch in Supervisor-Begründungen.

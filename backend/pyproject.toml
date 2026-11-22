@@ -12,19 +12,27 @@ dependencies = [
   "python-dotenv>=1",
   "httpx>=0.27",
   "openpyxl>=3.1",
+  "pydantic-settings>=2.6",
+  "langchain-core>=1.0",
+  "langchain-anthropic>=1.0",
+  "langgraph>=1.0",
+  "langgraph-checkpoint-sqlite>=3.0",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6", "respx>=0.21"]
 
 [tool.setuptools]
-packages = ["mietmarkt", "mietmarkt.demo", "api"]
+packages = ["mietmarkt", "mietmarkt.demo", "mietmarkt.geo", "mietmarkt.agenten", "api"]
 
 [tool.setuptools.package-data]
 "mietmarkt.demo" = ["*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Live-Tests rufen Claude wirklich auf (kostet Geld); nur ausdrücklich mit `pytest -m live`
+addopts = "-m 'not live'"
+markers = ["live: echter Aufruf der Anthropic-API, braucht ANTHROPIC_API_KEY"]
 
 [tool.ruff]
 line-length = 110

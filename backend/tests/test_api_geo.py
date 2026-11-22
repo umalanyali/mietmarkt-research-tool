@@ -38,7 +38,7 @@ def client(tmp_path):
             yield s
 
     app.dependency_overrides[sitzung] = test_sitzung
-    yield TestClient(app)
+    yield TestClient(app, base_url="http://localhost")
     app.dependency_overrides.clear()
 
 
