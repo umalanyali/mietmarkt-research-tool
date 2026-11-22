@@ -2,16 +2,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, { type Map as MLMap, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { Comp } from "../../daten/beispiel";
+import type { Comp } from "../api";
 import { KARTENSTIL } from "./kartenstil";
 
 export type Ebene = "Comps" | "Projekte" | "ÖPNV" | "Nahversorgung" | "Wohnlage";
 export const EBENEN: Ebene[] = ["Comps", "Projekte", "ÖPNV", "Nahversorgung", "Wohnlage"];
 
-interface Punkt {
+export interface Punkt {
   name: string;
-  dx: number;
-  dy: number;
+  lat: number;
+  lon: number;
 }
 
 export type KartenZustand = "bereit" | "laden" | "fehler";
@@ -68,7 +68,7 @@ function element(klasse: string, text: string, label: string, onClick?: () => vo
  * Eingabe: Standort, Ringe, Comps, weitere Punkte, aktive Ebenen, Auswahl; optional erzwungener Zustand.
  * Ausgabe: Kartenfläche mit Zoom-Knöpfen bzw. Lade- oder Fehlerhinweis.
  */
-export function EntwurfKarte({
+export function Karte({
   zentrum,
   ringeKm,
   comps,
@@ -90,7 +90,8 @@ export function EntwurfKarte({
   // Comps an derselben Adresse zu einem Gruppen-Marker „3–5“ zusammenfassen
   const gruppen = useMemo(() => {
     const m = new Map<string, Comp[]>();
-    for (const c of comps) m.set(c.objekt, [...(m.get(c.objekt) ?? []), c]);
+    // Comps ohne Koordinaten können nicht auf die Karte
+    for (const c of comps) if (c.lat !== null && c.lon !== null) m.set(c.objekt, [...(m.get(c.objekt) ?? []), c]);
     return [...m.values()];
   }, [comps]);
 
@@ -183,18 +184,9 @@ export function EntwurfKarte({
           const el = element(nr.length > 1 ? "km-comp km-gruppe" : "km-comp", text, label, () => onAuswahl(nr[0]));
           el.dataset.von = String(nr[0]);
           el.dataset.bis = String(nr[nr.length - 1]);
-          return new maplibregl.Marker({ element: el }).setLngLat([g[0].lon, g[0].lat]);
+          return new maplibregl.Marker({ element: el }).setLngLat([g[0].lon!, g[0].lat!]);
         }),
       );
-      const punkte = (liste: Punkt[], klasse: string, zeichen: string) =>
-        liste.map((p) =>
-          new maplibregl.Marker({ element: element(klasse, zeichen, p.name) }).setLngLat(
-            versatz(zentrum.lat, zentrum.lon, p.dx, p.dy),
-          ),
-        );
-      setze("Projekte", punkte(weitere.projekte, "km-projekt", "P"));
-      setze("ÖPNV", punkte(weitere.oepnv, "km-poi", "H"));
-      setze("Nahversorgung", punkte(weitere.nahversorgung, "km-poi", "N"));
       sichtbarkeit();
     });
 
@@ -216,6 +208,24 @@ export function EntwurfKarte({
       liste.forEach((m) => (m.getElement().style.display = sichtbar ? "" : "none"));
     }
   }
+
+  // Punkte-Ebenen (Bauprojekte, ÖPNV, Nahversorgung) kommen teils später aus der API; bei jeder Änderung neu setzen
+  useEffect(() => {
+    const karte = karteRef.current;
+    if (!karte || geladen !== "bereit") return;
+    const punkte = (liste: Punkt[], klasse: string, zeichen: string) =>
+      liste.map((p) => new maplibregl.Marker({ element: element(klasse, zeichen, p.name) }).setLngLat([p.lon, p.lat]).addTo(karte));
+    const neu = {
+      Projekte: punkte(weitere.projekte, "km-projekt", "P"),
+      ÖPNV: punkte(weitere.oepnv, "km-poi", "H"),
+      Nahversorgung: punkte(weitere.nahversorgung, "km-poi", "N"),
+    };
+    Object.assign(markerRef.current, neu);
+    sichtbarkeit();
+    return () => Object.values(neu).flat().forEach((m) => m.remove());
+    // sichtbarkeit liest aktiveEbenen selbst; neu setzen nur bei neuen Punkten oder nach dem Laden
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weitere, geladen]);
 
   useEffect(sichtbarkeit);
 

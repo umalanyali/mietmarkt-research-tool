@@ -20,7 +20,8 @@ if not exist frontend\node_modules (
 )
 
 if not exist daten mkdir daten
+if not exist daten\mietmarkt.db backend\.venv\Scripts\python -m mietmarkt.demo seed
 
 start "Mietmarkt Backend" /D backend .venv\Scripts\uvicorn api.main:app --host 127.0.0.1 --port 8000
 echo Mietmarkt Research laeuft auf http://localhost:5173
-pushd frontend & call npx vite --port 5173 --open /entwurf/d & popd
+pushd frontend & call npx vite --port 5173 --open & popd

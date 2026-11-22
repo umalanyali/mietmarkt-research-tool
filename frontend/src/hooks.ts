@@ -1,39 +1,70 @@
-// React-Hooks für Startseite und Dashboard: Adresssuche (Combobox) und Merkliste, dazu kleine Filterhilfen.
-import { useId, useMemo, useState } from "react";
-import { adressVorschlaege, comps, merklisteStart } from "../../daten/beispiel";
-import type { Baustein } from "../../komponenten/Merkliste";
+// React-Hooks für Startseite und Dashboard: Adresssuche (Combobox gegen die API) und Merkliste, dazu Filterhilfen.
+import { useEffect, useId, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { adressVorschlaege, ApiFehler, projektAnlegen, type Vorschlag } from "./api";
+import { merklisteStart } from "./daten/platzhalter";
+import type { Baustein } from "./komponenten/Merkliste";
 
-type Vorschlag = (typeof adressVorschlaege)[number];
+const MIN_ZEICHEN = 3;
+const DEBOUNCE_MS = 300;
+
+export type SuchStatus = "ruhig" | "laden" | "fehler" | "nicht-erreichbar";
 
 /**
- * Adresssuche als barrierefreie Combobox: Vorschläge ab 2 Zeichen, Pfeiltasten, Enter, Escape.
- * Eingabe: onStart (wird bei Enter nach gewählter Adresse aufgerufen), startwert (Vorbelegung des Felds).
- * Ausgabe: Props für das Eingabefeld (feld) und je Vorschlag (option), dazu Listenzustand.
+ * Adresssuche als barrierefreie Combobox. Vorschläge kommen von /api/adressen/vorschlaege (Photon),
+ * ab 3 Zeichen, 300 ms nach dem letzten Tastendruck; ältere Anfragen werden abgebrochen.
+ * Eingabe: onWahl (gewählter Vorschlag), startwert (Vorbelegung des Felds, löst keine Suche aus).
+ * Ausgabe: Props für Eingabefeld (feld) und Vorschläge (option), Listen- und Ladezustand, Quellenhinweis.
  */
-export function useAdressSuche(onStart: () => void, startwert = "") {
+export function useAdressSuche(onWahl: (v: Vorschlag) => void, startwert = "") {
   const listenId = useId();
   const [eingabe, setEingabe] = useState(startwert);
+  const [getippt, setGetippt] = useState(false);
   const [offen, setOffen] = useState(false);
   const [markiert, setMarkiert] = useState(0);
-  const [gewaehlt, setGewaehlt] = useState<Vorschlag | null>(null);
+  const [vorschlaege, setVorschlaege] = useState<Vorschlag[]>([]);
+  const [status, setStatus] = useState<SuchStatus>("ruhig");
+  const [attribution, setAttribution] = useState("");
 
-  // Prototyp: Vorschläge aus Beispieldaten; ab M4 kommen sie gedrosselt und gecacht aus dem Backend
-  const vorschlaege = useMemo(() => {
-    const s = eingabe.trim().toLowerCase();
-    if (s.length < 2) return [];
-    return adressVorschlaege
-      .filter((v) => `${v.strasse} ${v.plz} ${v.ort} ${v.ortsteil}`.toLowerCase().includes(s))
-      .slice(0, 5);
-  }, [eingabe]);
+  useEffect(() => {
+    const text = eingabe.trim();
+    if (!getippt || text.length < MIN_ZEICHEN) {
+      setVorschlaege([]);
+      setStatus("ruhig");
+      return;
+    }
+    const abbruch = new AbortController();
+    // Erst nach einer Tipppause fragen; jede neue Eingabe verwirft Timer und laufende Anfrage
+    const timer = window.setTimeout(() => {
+      setStatus("laden");
+      adressVorschlaege(text, abbruch.signal)
+        .then((a) => {
+          setVorschlaege(a.vorschlaege);
+          setAttribution(a.attribution);
+          setMarkiert(0);
+          setStatus("ruhig");
+        })
+        .catch((e: Error) => {
+          if (e.name === "AbortError") return;
+          setVorschlaege([]);
+          setStatus(e instanceof ApiFehler && e.status === 503 ? "nicht-erreichbar" : "fehler");
+        });
+    }, DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(timer);
+      abbruch.abort();
+    };
+  }, [eingabe, getippt]);
 
   const zeigeListe = offen && vorschlaege.length > 0;
-  const keinTreffer = offen && eingabe.trim().length >= 2 && vorschlaege.length === 0 && !gewaehlt;
+  const keinTreffer = offen && getippt && status === "ruhig" && eingabe.trim().length >= MIN_ZEICHEN && vorschlaege.length === 0;
 
-  /** Übernimmt einen Vorschlag ins Feld und schließt die Liste. Eingabe: Vorschlag. Ausgabe: keine. */
+  /** Übernimmt einen Vorschlag ins Feld, schließt die Liste und meldet ihn. Eingabe: Vorschlag. Ausgabe: keine. */
   function waehlen(v: Vorschlag) {
-    setGewaehlt(v);
-    setEingabe(`${v.strasse}, ${v.plz} ${v.ort}`);
+    setEingabe(v.label);
+    setGetippt(false);
     setOffen(false);
+    onWahl(v);
   }
 
   const feld = {
@@ -46,18 +77,14 @@ export function useAdressSuche(onStart: () => void, startwert = "") {
     "aria-activedescendant": zeigeListe ? `${listenId}-${markiert}` : undefined,
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
       setEingabe(e.target.value);
-      setGewaehlt(null);
+      setGetippt(true);
       setOffen(true);
-      setMarkiert(0);
     },
     onFocus: () => setOffen(true),
     // Verzögert schließen, damit ein Klick auf einen Vorschlag noch ankommt
     onBlur: () => window.setTimeout(() => setOffen(false), 120),
     onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (!zeigeListe) {
-        if (e.key === "Enter" && gewaehlt) onStart();
-        return;
-      }
+      if (!zeigeListe) return;
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setMarkiert((m) => (m + 1) % vorschlaege.length);
@@ -86,18 +113,33 @@ export function useAdressSuche(onStart: () => void, startwert = "") {
     onMouseEnter: () => setMarkiert(i),
   });
 
-  return { feld, option, listenId, vorschlaege, zeigeListe, keinTreffer };
+  return { feld, option, listenId, vorschlaege, zeigeListe, keinTreffer, status, attribution, waehlen };
 }
 
 /**
- * Merkliste und gemerkte Comps (Prototyp: nur im Speicher, ab M3 in der Datenbank).
- * Eingabe: keine. Ausgabe: Bausteine mit Setter, Abfrage/Umschalten je Baustein, gemerkte Comp-Nummern.
+ * Legt aus einem gewählten Vorschlag ein Projekt an und öffnet dessen Analyse.
+ * Eingabe: keine. Ausgabe: anlegen(v) und Zustand (ruhig, laden, fehler, nicht-erreichbar).
  */
-export function useMerkliste() {
-  const [bausteine, setBausteine] = useState<Baustein[]>(merklisteStart);
-  const [compsGemerkt, setCompsGemerkt] = useState<Set<number>>(
-    () => new Set(comps.filter((c) => c.gemerkt).map((c) => c.nr)),
-  );
+export function useProjektAnlage() {
+  const navigate = useNavigate();
+  const [status, setStatus] = useState<SuchStatus>("ruhig");
+  function anlegen(v: Vorschlag) {
+    setStatus("laden");
+    projektAnlegen(v)
+      .then((p) => navigate(`/analyse/${p.id}`))
+      .catch((e: Error) => setStatus(e instanceof ApiFehler && e.status === 503 ? "nicht-erreichbar" : "fehler"));
+  }
+  return { anlegen, status };
+}
+
+/**
+ * Merkliste und gemerkte Comps (Merkliste noch Platzhalter im Speicher, ab M3 in der Datenbank).
+ * Eingabe: Nummern der Comps, die laut Datenbank gemerkt sind; ob die Beispiel-Bausteine erscheinen. Ausgabe: Bausteine mit Setter,
+ * Abfrage/Umschalten je Baustein, gemerkte Comp-Nummern mit Umschalter.
+ */
+export function useMerkliste(gemerktStart: number[], mitBeispielen: boolean) {
+  const [bausteine, setBausteine] = useState<Baustein[]>(mitBeispielen ? merklisteStart : []);
+  const [compsGemerkt, setCompsGemerkt] = useState<Set<number>>(() => new Set(gemerktStart));
   return {
     bausteine,
     setBausteine,
@@ -124,7 +166,3 @@ export function passtZimmer(z: number, f: ZimmerFilter) {
   if (f === "4+") return z >= 4;
   return z === Number(f);
 }
-
-/** Kürzel und Langform der Entfernungsart (Route zu Fuß/Rad oder Luftlinie als Rückfall). */
-export const ENTF_KURZ = { Fuß: "F", Rad: "R", Luftlinie: "L" } as const;
-export const ENTF_LANG = { Fuß: "Route zu Fuß", Rad: "Route mit dem Rad", Luftlinie: "Luftlinie" } as const;

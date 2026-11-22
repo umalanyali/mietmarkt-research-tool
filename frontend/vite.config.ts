@@ -7,6 +7,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    // Kein CORS: sonst könnte jede fremde Website im Browser über den Proxy die lokale API lesen (Befund S1)
+    cors: false,
     proxy: { "/api": "http://127.0.0.1:8000" },
   },
   test: {

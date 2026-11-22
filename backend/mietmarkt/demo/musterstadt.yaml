@@ -1,0 +1,134 @@
+# Synthetischer Demo-Datensatz „Musterstadt“ (CLAUDE.md Regel 3: keine echten Projekt- oder Marktdaten).
+# Alle Namen, Adressen, Anbieter und Zahlen sind erfunden.
+# KARTENLAGE IST NUR KULISSE: Die Koordinaten liegen in einer realen Stadt, damit die Karte Straßen und Bebauung zeigt.
+# Die fiktiven Adressen haben mit den dort tatsächlich vorhandenen Gebäuden nichts zu tun.
+# Laden mit: cd backend && .venv/bin/python -m mietmarkt.demo seed
+projekte:
+- name: Lindenquartier
+  adresse: Lindenallee 30
+  plz: '12345'
+  ort: Musterstadt
+  ortsteil: Nordstadt
+  lat: 51.3127
+  lon: 9.4797
+  stichtag: '2026-11-04'
+  analysiert_am: '2026-11-11'
+  quellen:
+  - {name: RIWIS, art: datei, datei: RIWIS-Marktmonitor PLZ 12345.png, stand: 11/2026, abgerufen_am: '2026-11-11'}
+  - {name: VALUE, art: datei, datei: VALUE-Export Q3-2026.csv, stand: Q3/2026, abgerufen_am: '2026-11-08'}
+  - {name: IS24-Exposés, art: datei, datei: 12 Exposés (PDF), stand: 04.11.2026, abgerufen_am: '2026-11-04'}
+  - {name: Statistikamt Musterstadt, art: manuell, stand: 31.12.2025, abgerufen_am: '2026-11-02'}
+  - {name: Statistisches Landesamt, art: manuell, stand: '2025', abgerufen_am: '2026-11-02'}
+  - {name: Mietspiegel Musterstadt, art: manuell, stand: '2026', abgerufen_am: '2026-11-02'}
+  comps:
+  - {nr: 1, objekt: Lindenhof 4, anbieter: Beispiel Wohnbau, typ: Regel, zimmer: 2, baujahr: 2025, wohnflaeche: 58.4, kaltmiete: 1012, ebk: true, online_seit: '2026-10-01', anfragen: 41, lat: 51.309915,
+    lon: 9.485736, gemerkt: true, quelle: IS24-Exposés, fundstelle: 'Exposé Lindenhof 4, S. 1'}
+  - {nr: 2, objekt: Am Mühlgraben 12, anbieter: Muster Immobilien, typ: DG, zimmer: 3, baujahr: 2025, wohnflaeche: 86.0, kaltmiete: 1720, ebk: true, online_seit: '2026-10-23', anfragen: 9, lat: 51.314317,
+    lon: 9.470502, gemerkt: false, quelle: IS24-Exposés, fundstelle: 'Exposé Am Mühlgraben 12, S. 1'}
+  - {nr: 3, objekt: Kastanienallee 21, anbieter: Projekt Nord GmbH, typ: EG, zimmer: 2, baujahr: 2026, wohnflaeche: 61.2, kaltmiete: 1028, ebk: true, online_seit: '2026-10-14', anfragen: 27, lat: 51.317371,
+    lon: 9.492347, gemerkt: true, quelle: IS24-Exposés, fundstelle: 'Exposé Kastanienallee 21, S. 1'}
+  - {nr: 4, objekt: Kastanienallee 21, anbieter: Projekt Nord GmbH, typ: Regel, zimmer: 3, baujahr: 2026, wohnflaeche: 78.5, kaltmiete: 1295, ebk: true, online_seit: '2026-10-14', anfragen: 19, lat: 51.317371,
+    lon: 9.492347, gemerkt: false, quelle: IS24-Exposés, fundstelle: 'Exposé Kastanienallee 21, S. 1'}
+  - {nr: 5, objekt: Kastanienallee 21, anbieter: Projekt Nord GmbH, typ: DG, zimmer: 4, baujahr: 2026, wohnflaeche: 104.3, kaltmiete: 1930, ebk: true, online_seit: '2026-10-14', anfragen: 6, lat: 51.317371,
+    lon: 9.492347, gemerkt: false, quelle: IS24-Exposés, fundstelle: 'Exposé Kastanienallee 21, S. 1'}
+  - {nr: 6, objekt: Ulmenweg 7, anbieter: Privat, typ: Regel, zimmer: 1, baujahr: 2024, wohnflaeche: 38.9, kaltmiete: 742, ebk: false, online_seit: '2026-10-30', anfragen: 14, lat: 51.306861, lon: 9.463891,
+    gemerkt: false, quelle: IS24-Exposés, fundstelle: 'Exposé Ulmenweg 7, S. 1'}
+  - {nr: 7, objekt: Brunnenstraße 33, anbieter: Beispiel Wohnbau, typ: Regel, zimmer: 2, baujahr: 2025, wohnflaeche: 55.0, kaltmiete: 935, ebk: true, online_seit: '2026-09-17', anfragen: 52, lat: 51.304615,
+    lon: 9.498383, gemerkt: false, quelle: IS24-Exposés, fundstelle: 'Exposé Brunnenstraße 33, S. 1'}
+  - {nr: 8, objekt: Brunnenstraße 33, anbieter: Beispiel Wohnbau, typ: DG, zimmer: 3, baujahr: 2025, wohnflaeche: 91.7, kaltmiete: 1752, ebk: true, online_seit: '2026-09-17', anfragen: 11, lat: 51.304615,
+    lon: 9.498383, gemerkt: false, quelle: IS24-Exposés, fundstelle: 'Exposé Brunnenstraße 33, S. 1'}
+  - {nr: 9, objekt: Hafenkante 2, anbieter: Musterstadt Living, typ: Regel, zimmer: 2, baujahr: 2026, wohnflaeche: 63.8, kaltmiete: 1148, ebk: true, online_seit: '2026-10-26', anfragen: 8, lat: 51.322581,
+    lon: 9.458143, gemerkt: true, quelle: IS24-Exposés, fundstelle: 'Exposé Hafenkante 2, S. 1'}
+  - {nr: 10, objekt: Schulgasse 15, anbieter: Privat, typ: EG, zimmer: 3, baujahr: 2023, wohnflaeche: 82.1, kaltmiete: 1260, ebk: false, online_seit: '2026-09-02', anfragen: 30, lat: 51.327073, lon: 9.488323,
+    gemerkt: false, quelle: IS24-Exposés, fundstelle: 'Exposé Schulgasse 15, S. 1'}
+  - {nr: 11, objekt: Feldrain 9, anbieter: Muster Immobilien, typ: Regel, zimmer: 4, baujahr: 2025, wohnflaeche: 98.6, kaltmiete: 1625, ebk: true, online_seit: '2026-10-08', anfragen: 7, lat: 51.29698,
+    lon: 9.475389, gemerkt: false, quelle: IS24-Exposés, fundstelle: 'Exposé Feldrain 9, S. 1'}
+  - {nr: 12, objekt: Gartenstraße 40, anbieter: Musterstadt Living, typ: Regel, zimmer: 2, baujahr: 2026, wohnflaeche: 49.5, kaltmiete: 895, ebk: true, online_seit: '2026-10-20', anfragen: 22, lat: 51.315395,
+    lon: 9.50485, gemerkt: false, quelle: IS24-Exposés, fundstelle: 'Exposé Gartenstraße 40, S. 1'}
+  kennzahlen:
+  - {gruppe: soziodemografie, bezeichnung: Einwohner, kategorie: '', gebiet: Ortsteil Nordstadt, wert: 18460, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
+  - {gruppe: soziodemografie, bezeichnung: Einwohner, kategorie: '', gebiet: Stadt, wert: 204300, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
+  - {gruppe: soziodemografie, bezeichnung: Haushalte, kategorie: '', gebiet: Ortsteil Nordstadt, wert: 9870, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
+  - {gruppe: soziodemografie, bezeichnung: Haushalte, kategorie: '', gebiet: Stadt, wert: 108900, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
+  - {gruppe: soziodemografie, bezeichnung: Ø Personen je HH, kategorie: '', gebiet: Ortsteil Nordstadt, wert: 1.87, einheit: '', stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: soziodemografie, bezeichnung: Ø Personen je HH, kategorie: '', gebiet: Stadt, wert: 1.88, einheit: '', stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: soziodemografie, bezeichnung: Kaufkraft je Einw., kategorie: '', gebiet: Ortsteil Nordstadt, wert: 26900, einheit: €, stellen: 0, herkunft: abgelesen, quelle: RIWIS}
+  - {gruppe: soziodemografie, bezeichnung: Kaufkraft je Einw., kategorie: '', gebiet: Stadt, wert: 25100, einheit: €, stellen: 0, herkunft: abgelesen, quelle: RIWIS}
+  - {gruppe: soziodemografie, bezeichnung: Arbeitslosenquote, kategorie: '', gebiet: Ortsteil Nordstadt, wert: 5.4, einheit: '%', stellen: 1, herkunft: import, quelle: RIWIS}
+  - {gruppe: soziodemografie, bezeichnung: Arbeitslosenquote, kategorie: '', gebiet: Stadt, wert: 6.9, einheit: '%', stellen: 1, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø PLZ 12345, kategorie: Q4/24, gebiet: PLZ 12345, wert: 15.1, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø PLZ 12345, kategorie: Q1/25, gebiet: PLZ 12345, wert: 14.8, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø PLZ 12345, kategorie: Q2/25, gebiet: PLZ 12345, wert: 15.4, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø PLZ 12345, kategorie: Q3/25, gebiet: PLZ 12345, wert: 15.9, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø PLZ 12345, kategorie: Q4/25, gebiet: PLZ 12345, wert: 16.3, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø PLZ 12345, kategorie: Q1/26, gebiet: PLZ 12345, wert: 16.2, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø PLZ 12345, kategorie: Q2/26, gebiet: PLZ 12345, wert: 16.6, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø PLZ 12345, kategorie: Q3/26, gebiet: PLZ 12345, wert: 16.1, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø Musterstadt, kategorie: Q4/24, gebiet: Stadt, wert: 14.2, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø Musterstadt, kategorie: Q1/25, gebiet: Stadt, wert: 14.4, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø Musterstadt, kategorie: Q2/25, gebiet: Stadt, wert: 14.6, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø Musterstadt, kategorie: Q3/25, gebiet: Stadt, wert: 14.9, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø Musterstadt, kategorie: Q4/25, gebiet: Stadt, wert: 15.1, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø Musterstadt, kategorie: Q1/26, gebiet: Stadt, wert: 15.3, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø Musterstadt, kategorie: Q2/26, gebiet: Stadt, wert: 15.6, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: Ø Musterstadt, kategorie: Q3/26, gebiet: Stadt, wert: 15.8, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: 95-%-Quantil, kategorie: Q4/24, gebiet: PLZ 12345, wert: 18.6, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: 95-%-Quantil, kategorie: Q1/25, gebiet: PLZ 12345, wert: 18.9, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: 95-%-Quantil, kategorie: Q2/25, gebiet: PLZ 12345, wert: 19.0, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: 95-%-Quantil, kategorie: Q3/25, gebiet: PLZ 12345, wert: 19.4, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: 95-%-Quantil, kategorie: Q4/25, gebiet: PLZ 12345, wert: 20.6, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: 95-%-Quantil, kategorie: Q1/26, gebiet: PLZ 12345, wert: 21.2, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: 95-%-Quantil, kategorie: Q2/26, gebiet: PLZ 12345, wert: 21.3, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: zeitreihe, bezeichnung: 95-%-Quantil, kategorie: Q3/26, gebiet: PLZ 12345, wert: 21.4, einheit: €/m², stellen: 2, herkunft: import, quelle: RIWIS}
+  - {gruppe: preisklassen, bezeichnung: Angebote, kategorie: < 12, gebiet: PLZ 12345, wert: 4, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
+  - {gruppe: preisklassen, bezeichnung: Angebote, kategorie: '12–13,50', gebiet: PLZ 12345, wert: 6, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
+  - {gruppe: preisklassen, bezeichnung: Angebote, kategorie: '13,50–15', gebiet: PLZ 12345, wert: 14, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
+  - {gruppe: preisklassen, bezeichnung: Angebote, kategorie: '15–16,50', gebiet: PLZ 12345, wert: 21, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
+  - {gruppe: preisklassen, bezeichnung: Angebote, kategorie: '16,50–18', gebiet: PLZ 12345, wert: 38, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
+  - {gruppe: preisklassen, bezeichnung: Angebote, kategorie: '18–19,50', gebiet: PLZ 12345, wert: 13, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
+  - {gruppe: preisklassen, bezeichnung: Angebote, kategorie: '19,50–21', gebiet: PLZ 12345, wert: 6, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
+  - {gruppe: preisklassen, bezeichnung: Angebote, kategorie: '> 21', gebiet: PLZ 12345, wert: 3, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
+  - {gruppe: value, bezeichnung: Angebotsmiete Neubau, kategorie: '', gebiet: Umkreis 2 km, wert: 17.4, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value, bezeichnung: Veränderung 12 Monate, kategorie: '', gebiet: Umkreis 2 km, wert: 3.8, einheit: '%', stellen: 1, herkunft: import, quelle: VALUE}
+  - {gruppe: value, bezeichnung: Vermarktungsdauer, kategorie: '', gebiet: Umkreis 2 km, wert: 36, einheit: Tage, stellen: 0, herkunft: import, quelle: VALUE}
+  - {gruppe: value, bezeichnung: Angebote (12 M.), kategorie: '', gebiet: Umkreis 2 km, wert: 412, einheit: '', stellen: 0, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: n, kategorie: 1 Zi., gebiet: Umkreis 2 km, wert: 48, einheit: '', stellen: 0, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Ø m², kategorie: 1 Zi., gebiet: Umkreis 2 km, wert: 37, einheit: m², stellen: 0, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Min, kategorie: 1 Zi., gebiet: Umkreis 2 km, wert: 13.9, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Ø, kategorie: 1 Zi., gebiet: Umkreis 2 km, wert: 19.2, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Median, kategorie: 1 Zi., gebiet: Umkreis 2 km, wert: 19.05, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: P75, kategorie: 1 Zi., gebiet: Umkreis 2 km, wert: 20.4, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Max, kategorie: 1 Zi., gebiet: Umkreis 2 km, wert: 24.8, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: n, kategorie: 2 Zi., gebiet: Umkreis 2 km, wert: 156, einheit: '', stellen: 0, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Ø m², kategorie: 2 Zi., gebiet: Umkreis 2 km, wert: 57, einheit: m², stellen: 0, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Min, kategorie: 2 Zi., gebiet: Umkreis 2 km, wert: 12.8, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Ø, kategorie: 2 Zi., gebiet: Umkreis 2 km, wert: 17.6, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Median, kategorie: 2 Zi., gebiet: Umkreis 2 km, wert: 17.45, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: P75, kategorie: 2 Zi., gebiet: Umkreis 2 km, wert: 18.7, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Max, kategorie: 2 Zi., gebiet: Umkreis 2 km, wert: 22.1, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: n, kategorie: 3 Zi., gebiet: Umkreis 2 km, wert: 131, einheit: '', stellen: 0, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Ø m², kategorie: 3 Zi., gebiet: Umkreis 2 km, wert: 79, einheit: m², stellen: 0, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Min, kategorie: 3 Zi., gebiet: Umkreis 2 km, wert: 12.2, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Ø, kategorie: 3 Zi., gebiet: Umkreis 2 km, wert: 16.9, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Median, kategorie: 3 Zi., gebiet: Umkreis 2 km, wert: 16.8, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: P75, kategorie: 3 Zi., gebiet: Umkreis 2 km, wert: 18.1, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Max, kategorie: 3 Zi., gebiet: Umkreis 2 km, wert: 21.3, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: n, kategorie: 4 Zi., gebiet: Umkreis 2 km, wert: 58, einheit: '', stellen: 0, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Ø m², kategorie: 4 Zi., gebiet: Umkreis 2 km, wert: 98, einheit: m², stellen: 0, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Min, kategorie: 4 Zi., gebiet: Umkreis 2 km, wert: 11.9, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Ø, kategorie: 4 Zi., gebiet: Umkreis 2 km, wert: 16.4, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Median, kategorie: 4 Zi., gebiet: Umkreis 2 km, wert: 16.25, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: P75, kategorie: 4 Zi., gebiet: Umkreis 2 km, wert: 17.6, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Max, kategorie: 4 Zi., gebiet: Umkreis 2 km, wert: 20.5, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: n, kategorie: 5+ Zi., gebiet: Umkreis 2 km, wert: 19, einheit: '', stellen: 0, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Ø m², kategorie: 5+ Zi., gebiet: Umkreis 2 km, wert: 128, einheit: m², stellen: 0, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Min, kategorie: 5+ Zi., gebiet: Umkreis 2 km, wert: 12.4, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Ø, kategorie: 5+ Zi., gebiet: Umkreis 2 km, wert: 16.1, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Median, kategorie: 5+ Zi., gebiet: Umkreis 2 km, wert: 15.9, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: P75, kategorie: 5+ Zi., gebiet: Umkreis 2 km, wert: 17.2, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: value_tabelle, bezeichnung: Max, kategorie: 5+ Zi., gebiet: Umkreis 2 km, wert: 19.8, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
+  - {gruppe: weitere, bezeichnung: Einwohner Ortsteil Nordstadt, kategorie: '', gebiet: '', wert: 18460, einheit: '', stellen: 0, herkunft: manuell, quelle: Statistikamt Musterstadt}
+  - {gruppe: weitere, bezeichnung: Baufertigstellungen Wohnungen, kategorie: '', gebiet: '', wert: 1240, einheit: '', stellen: 0, herkunft: manuell, quelle: Statistisches Landesamt}
+  - {gruppe: weitere, bezeichnung: Mietspiegel Ø Nettokaltmiete, kategorie: '', gebiet: '', wert: 9.85, einheit: €/m², stellen: 2, herkunft: manuell, quelle: Mietspiegel Musterstadt}
+- {name: Hafenblock, adresse: Kaistraße 8, plz: '12349', ort: Musterstadt, ortsteil: Hafen, lat: 51.3226, lon: 9.4583, stichtag: '2026-11-01', analysiert_am: '2026-11-07'}
+- {name: Am Stadtpark, adresse: Parkring 61, plz: '23456', ort: Beispielheim, ortsteil: Zentrum, lat: 51.3028, lon: 9.5043, stichtag: '2026-10-27', analysiert_am: '2026-10-29'}

@@ -1,13 +1,17 @@
-// Oberste Routing-Ebene: Alles läuft über Design D; unbekannte Adressen landen auf dessen Startseite.
+// Routing der App: Startseite, Analyse-Dashboard je Projekt und Zustandsübersicht.
 import { Navigate, Route, Routes } from "react-router-dom";
-import { EntwurfRouten } from "./entwuerfe/Routen";
+import { Startseite } from "./seiten/Startseite";
+import { Analyse } from "./seiten/Analyse";
+import { Zustaende } from "./seiten/Zustaende";
 
-/** App-Wurzel. Eingabe: keine. Ausgabe: die passende Seite zur aktuellen Adresse. */
+/** App-Wurzel. Eingabe: keine. Ausgabe: die Seite zur aktuellen Adresse; Unbekanntes leitet auf die Startseite. */
 export function App() {
   return (
     <Routes>
-      <Route path="/entwurf/*" element={<EntwurfRouten />} />
-      <Route path="*" element={<Navigate to="/entwurf/d" replace />} />
+      <Route path="/" element={<Startseite />} />
+      <Route path="/analyse/:id" element={<Analyse />} />
+      <Route path="/zustaende" element={<Zustaende />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

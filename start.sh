@@ -25,9 +25,14 @@ fi
 
 mkdir -p daten
 
+# Beim ersten Start den synthetischen Demo-Datensatz laden, sonst bleibt die App leer
+if [ ! -f daten/mietmarkt.db ]; then
+  backend/.venv/bin/python -m mietmarkt.demo seed
+fi
+
 (cd backend && .venv/bin/uvicorn api.main:app --host 127.0.0.1 --port 8000) &
 BACKEND=$!
 trap 'kill $BACKEND 2>/dev/null' EXIT INT TERM HUP
 
 echo "Mietmarkt Research läuft auf http://localhost:5173 (Beenden mit Strg+C)"
-(cd frontend && npx vite --port 5173 --open /entwurf/d)
+(cd frontend && npx vite --port 5173 --open)

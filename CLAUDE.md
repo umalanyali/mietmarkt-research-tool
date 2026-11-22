@@ -30,4 +30,5 @@ Privates Portfolio-Tool für Neubau-Mietmarktanalysen.
 - Start: `./start.sh` (macOS) bzw. `start.bat` (Windows), oder Doppelklick auf `Mietmarkt Research.command`
 - Backend-Tests: `cd backend && .venv/bin/pytest -q && .venv/bin/ruff check .`
 - Frontend-Tests: `cd frontend && npm test && npx tsc --noEmit`
+- Demo-Daten laden: `cd backend && .venv/bin/python -m mietmarkt.demo seed`
 - Screenshots: `cd frontend && node skripte/aufnahme.mjs <ordner> name=/pfad` (App muss laufen)

@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 # Finder-Start kennt nicht immer den vollen PATH (Homebrew, Node, uv)
 export PATH="/opt/homebrew/bin:/usr/local/bin:/Library/Frameworks/Python.framework/Versions/Current/bin:$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 
-URL="http://localhost:5173/entwurf/d"
+URL="http://localhost:5173"
 
 if curl -s -o /dev/null --max-time 2 "$URL"; then
   echo "Mietmarkt Research läuft bereits – öffne $URL"

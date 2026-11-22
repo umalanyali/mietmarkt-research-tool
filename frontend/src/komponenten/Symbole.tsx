@@ -38,3 +38,13 @@ export function SucheSymbol() {
     </svg>
   );
 }
+
+/** Ortsmarke für die Vorschlagsliste. Eingabe: keine. Ausgabe: SVG. */
+export function PinSymbol() {
+  return (
+    <svg width="12" height="16" viewBox="0 0 12 16" aria-hidden="true">
+      <path d="M6 15s5-5.2 5-9A5 5 0 0 0 1 6c0 3.8 5 9 5 9z" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="6" cy="6" r="1.8" fill="currentColor" />
+    </svg>
+  );
+}

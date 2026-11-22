@@ -1,0 +1,28 @@
+"""Datenbankanbindung (SQLite über SQLModel). Standardpfad: daten/mietmarkt.db im Repository, änderbar per MIETMARKT_DB."""
+import os
+from pathlib import Path
+
+from sqlalchemy import Engine
+from sqlmodel import SQLModel, create_engine
+
+from . import modelle  # noqa: F401 – registriert die Tabellen bei SQLModel.metadata
+
+REPO = Path(__file__).resolve().parents[2]
+
+
+def datenbankpfad() -> Path:
+    """Pfad der Datenbankdatei. Eingabe: keine (liest MIETMARKT_DB). Ausgabe: Path."""
+    return Path(os.environ.get("MIETMARKT_DB", REPO / "daten" / "mietmarkt.db"))
+
+
+def engine(pfad: Path | None = None) -> Engine:
+    """Öffnet die Datenbank und legt fehlende Tabellen an.
+
+    Eingabe: optional ein Pfad (Standard: datenbankpfad()).
+    Ausgabe: SQLAlchemy-Engine.
+    """
+    pfad = pfad or datenbankpfad()
+    pfad.parent.mkdir(parents=True, exist_ok=True)
+    e = create_engine(f"sqlite:///{pfad}")
+    SQLModel.metadata.create_all(e)
+    return e

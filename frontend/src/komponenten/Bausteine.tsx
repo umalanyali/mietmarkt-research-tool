@@ -1,14 +1,12 @@
 /*
  * Wiederverwendbare Bausteine des Dashboards: Comps- und VALUE-Tabelle, Freigabe-Karte, Herleitungskette, Zustände.
- * Struktur und Verhalten stehen hier, das Aussehen in d.css (Klassen mit Präfix „e-“).
+ * Struktur und Verhalten stehen hier, das Aussehen in stil/app.css (Klassen mit Präfix „e-“).
  */
 import { useState } from "react";
-import { de, ganz } from "../../format";
-import type { Comp } from "../../daten/beispiel";
-import { valueTabelle } from "../../daten/beispiel";
-import { SternSymbol } from "../../komponenten/Symbole";
-import { ENTF_KURZ, ENTF_LANG } from "./hooks";
-import { freigabe, herleitung, mietansatzErgebnis, type AgentSchritt } from "./agentenDaten";
+import { de, ganz } from "../format";
+import type { Comp, Marktkennzahl, Wert } from "../api";
+import { SternSymbol } from "./Symbole";
+import { freigabe, herleitung, mietansatzErgebnis, type AgentSchritt } from "../daten/agentenDaten";
 
 // ------------------------------------------------------------------ Stern
 
@@ -88,18 +86,19 @@ export function CompsTabelle({ comps, gemerkt, onStern, ausgewaehlt, onAuswahl, 
                 <td>{c.typ}</td>
                 <td className="z">{c.zimmer}</td>
                 <td className="z">{c.baujahr}</td>
-                <td className="z">{de(c.wfl, 1)}</td>
-                <td className="z e-haupt">{de(c.eurQm)}</td>
-                <td className="z">{ganz(c.kalt)}</td>
+                <td className="z">{de(c.wohnflaeche, 1)}</td>
+                <td className="z e-haupt" title={c.eur_qm.rechenweg_text}>{de(c.eur_qm.wert)}</td>
+                <td className="z">{ganz(c.kaltmiete)}</td>
                 <td>{c.ebk ? "ja" : "–"}</td>
-                <td className="z">{c.tage}</td>
-                <td className="z">{c.anfragen}</td>
-                <td className="z" title={c.anfragenMonat === null ? "unter 7 Tagen online" : undefined}>
-                  {c.anfragenMonat === null ? "–" : de(c.anfragenMonat, 1)}
+                <td className="z" title={c.tage_online.rechenweg_text}>{de(c.tage_online.wert, 0)}</td>
+                <td className="z">{c.anfragen ?? "–"}</td>
+                <td className="z" title={c.anfragen_monat.rechenweg_text}>
+                  {de(c.anfragen_monat.wert, 1)}
                 </td>
-                <td className="z" title={ENTF_LANG[c.entfArt]}>
-                  {de(c.entfKm, 1)}
-                  <span className="e-entf">{ENTF_KURZ[c.entfArt]}</span>
+                <td className="z" title={c.entfernung_km?.rechenweg_text}>
+                  {de(c.entfernung_km?.wert, 1)}
+                  {/* Bis zum Routing (M4) ist jede Entfernung Luftlinie */}
+                  <span className="e-entf">L</span>
                 </td>
                 <td>
                   <EStern an={gemerkt.has(c.nr)} name={`Comp ${c.nr}`} onKlick={() => onStern(c.nr)} />
@@ -115,38 +114,50 @@ export function CompsTabelle({ comps, gemerkt, onStern, ausgewaehlt, onAuswahl, 
 
 // ------------------------------------------------------------------ VALUE
 
-/** VALUE-Statistik je Zimmerzahl (n, Ø m², Min, Ø, Median, P75, Max). Eingabe: keine (Beispieldaten). Ausgabe: Tabelle. */
-export function ValueTabelle() {
+const VALUE_SPALTEN = ["n", "Ø m²", "Min", "Ø", "Median", "P75", "Max"];
+
+/**
+ * VALUE-Statistik je Zimmerzahl. Eingabe: Kennzahlen der Gruppe „value_tabelle“ (Zeile = Kategorie, Spalte = Bezeichnung).
+ * Ausgabe: Tabelle; jede Zelle zeigt beim Überfahren Herkunft und Rechenweg.
+ */
+export function ValueTabelle({ werte }: { werte: Marktkennzahl[] }) {
+  const zeilen = [...new Set(werte.map((w) => w.kategorie))];
+  const zelle = (zeile: string, spalte: string) => werte.find((w) => w.kategorie === zeile && w.bezeichnung === spalte);
   return (
     <table className="e-tabelle e-value">
       <thead>
         <tr>
           <th scope="col">Zi.</th>
-          <th className="z" scope="col">n</th>
-          <th className="z" scope="col">Ø m²</th>
-          <th className="z" scope="col">Min</th>
-          <th className="z" scope="col" title="flächengewichtet">Ø</th>
-          <th className="z" scope="col">Median</th>
-          <th className="z" scope="col">P75</th>
-          <th className="z" scope="col">Max</th>
+          {VALUE_SPALTEN.map((s) => (
+            <th key={s} className="z" scope="col">
+              {s}
+            </th>
+          ))}
         </tr>
       </thead>
       <tbody>
-        {valueTabelle.map((z) => (
-          <tr key={z.zimmer}>
-            <td>{z.zimmer.replace(" Zi.", "")}</td>
-            <td className="z">{z.n}</td>
-            <td className="z">{z.wfl}</td>
-            <td className="z e-leise">{z.min}</td>
-            <td className="z e-haupt">{z.mittel}</td>
-            <td className="z">{z.median}</td>
-            <td className="z">{z.p75}</td>
-            <td className="z e-leise">{z.max}</td>
+        {zeilen.map((z) => (
+          <tr key={z}>
+            <td>{z.replace(" Zi.", "")}</td>
+            {VALUE_SPALTEN.map((s) => {
+              const w = zelle(z, s);
+              const klasse = s === "Ø" ? "z e-haupt" : s === "Min" || s === "Max" ? "z e-leise" : "z";
+              return (
+                <td key={s} className={klasse} title={w ? herkunftText(w) : undefined}>
+                  {de(w?.wert, w?.stellen ?? 0)}
+                </td>
+              );
+            })}
           </tr>
         ))}
       </tbody>
     </table>
   );
+}
+
+/** Herkunft einer Zahl als Hinweistext. Eingabe: Wert oder Kennzahl. Ausgabe: z. B. „import · Σ … = …“. */
+export function herkunftText(w: Pick<Wert, "herkunft" | "rechenweg_text">): string {
+  return [w.herkunft, w.rechenweg_text].filter(Boolean).join(" · ");
 }
 
 // ------------------------------------------------------------------ Freigabe (Interrupt)
@@ -314,13 +325,13 @@ export function LeerZustand({ titel, text, aktion }: { titel: string; text: stri
   );
 }
 
-/** Fehlerzustand mit Ursache und Ausweg. Eingabe: Titel, Text, Aktion. Ausgabe: Hinweisblock (role=alert). */
-export function FehlerZustand({ titel, text, aktion = "Erneut versuchen" }: { titel: string; text: string; aktion?: string }) {
+/** Fehlerzustand mit Ursache und Ausweg. Eingabe: Titel, Text, Aktionstext und -Handler. Ausgabe: Hinweisblock (role=alert). */
+export function FehlerZustand({ titel, text, aktion = "Erneut versuchen", onAktion }: { titel: string; text: string; aktion?: string; onAktion?: () => void }) {
   return (
     <div className="e-fehler" role="alert">
       <p className="e-fehler-titel">{titel}</p>
       <p>{text}</p>
-      <button type="button" className="e-knopf">
+      <button type="button" className="e-knopf" onClick={onAktion}>
         {aktion}
       </button>
     </div>
