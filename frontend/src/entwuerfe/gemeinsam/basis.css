@@ -1,0 +1,59 @@
+/* Strukturelle Grundlagen (Layout, Zustände, Karte, Diagramme, Merkliste); Farben und Schrift setzt d.css. */
+.e-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.e-tabelle { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums lining-nums; }
+.e-tabelle th, .e-tabelle td { white-space: nowrap; text-align: left; }
+.e-tabelle .z { text-align: right; }
+.e-tabelle-rahmen { overflow-x: auto; }
+.e-comps tbody tr { cursor: pointer; }
+.e-vorschlag { display: block; font-size: 11px; color: var(--akzent); font-weight: 500; }
+.e-verweis { font-size: 12px; margin-bottom: 8px; }
+.e-verweis a { color: var(--akzent); }
+.e-objekt .e-unter { display: block; }
+.e-stern { border: 0; background: none; padding: 4px; line-height: 0; cursor: pointer; min-width: 24px; min-height: 24px; }
+.e-kette-liste { list-style: none; margin: 0; padding: 0; }
+.e-kette-zeile { all: unset; box-sizing: border-box; display: grid; width: 100%; cursor: pointer; align-items: baseline; }
+.e-kette-zeile:focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
+.e-belege { list-style: none; margin: 0; padding: 0; }
+.e-beleg, .e-link { border: 0; background: none; padding: 0; cursor: pointer; font: inherit; color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.e-laden { display: grid; gap: 10px; }
+.e-laden span { display: block; height: 10px; background: var(--linie); animation: e-puls 1.4s ease-in-out infinite; }
+@keyframes e-puls { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .e-laden span, .ek-ladebalken { animation: none !important; } * { transition: none !important; } }
+.ek { position: relative; overflow: hidden; }
+.ek-flaeche { width: 100%; height: 100%; } /* MapLibre setzt position: relative auf den Container */
+.ek-zoom { position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; z-index: 2; }
+.ek-zoom button { width: 32px; height: 32px; cursor: pointer; font-size: 16px; line-height: 1; }
+.ek-zustand { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 24px; z-index: 3; }
+.ek-ladebalken { width: 120px; height: 2px; background: var(--linie); position: relative; overflow: hidden; }
+.ek-ladebalken::after { content: ""; position: absolute; inset: 0; width: 40%; background: var(--akzent); animation: ek-lauf 1.2s ease-in-out infinite; }
+@keyframes ek-lauf { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+.km { font-variant-numeric: tabular-nums; display: flex; align-items: center; justify-content: center; }
+button.km { cursor: pointer; }
+.maplibregl-ctrl-attrib { font-size: 10px !important; background: color-mix(in srgb, var(--flaeche) 85%, transparent) !important; }
+.maplibregl-ctrl-group { display: none; }
+.maplibregl-ctrl-attrib a { color: inherit !important; }
+
+/* Seitengrundlage (vorher im alten Prototyp global gesetzt) */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; background: #f3f1ec; -webkit-font-smoothing: antialiased; }
+
+/* Diagramme (komponenten/Diagramme.tsx) */
+.diagramm { position: relative; }
+.diagramm svg { display: block; overflow: visible; }
+.achse { font-size: 10.5px; fill: var(--text-leise); font-variant-numeric: tabular-nums; }
+.achse-wert { fill: var(--text); font-weight: 500; }
+.legende { display: flex; flex-wrap: wrap; gap: 4px 16px; list-style: none; padding: 0; margin: 8px 0 0; font-size: 11px; color: var(--text-leise); }
+.legende li { display: flex; align-items: center; gap: 6px; }
+.tooltip { position: absolute; top: 0; min-width: 150px; background: var(--flaeche); border: 1px solid var(--linie-stark); padding: 8px 12px; font-size: 11px; pointer-events: none; }
+.tooltip-titel { font-weight: 600; margin-bottom: 2px; }
+.tooltip-zeile { display: flex; justify-content: space-between; gap: 12px; }
+
+/* Merkliste (komponenten/Merkliste.tsx) */
+.merkliste-liste { list-style: none; margin: 0; padding: 0; }
+.merkliste-zeile { display: grid; align-items: start; }
+.merkliste-zeile.zieht { position: relative; z-index: 2; border: 1px solid var(--linie-stark); }
+.griff, .entfernen { border: 0; background: none; cursor: grab; padding: 2px 0; }
+.entfernen { cursor: pointer; font-size: 16px; line-height: 1; }
+.merkliste-leer { color: var(--text-leise); font-size: 12.5px; }
+.merkliste-export { display: inline-flex; align-items: center; justify-content: center; }
+.merkliste-export:disabled { opacity: 0.5; cursor: not-allowed; }
