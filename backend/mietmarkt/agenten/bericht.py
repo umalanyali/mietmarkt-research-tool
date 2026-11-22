@@ -76,6 +76,18 @@ def anzeigen(w: dict) -> str:
     return f"{de(w['wert'], _stellen(w))} {w.get('einheit', '')}".rstrip()
 
 
+def beschreibung(w: dict, quellen: dict[int, str]) -> str:
+    """Woher ein Wert kommt: Rechenweg bzw. Bezeichnung mit Zeitraum und Gebiet, dazu die Quelle mit Stand.
+
+    Eingabe: Wert als dict, {quelle_id: Bezeichnung}. Ausgabe: Text für Fußnote und Werte-Katalog. Warum Zeitraum
+    und Gebiet: ohne sie ordnet das Modell eine Kennzahl leicht dem falschen Gebiet zu.
+    """
+    teile = [w.get("rechenweg_text") or w.get("bezeichnung", ""), w.get("kategorie", ""), w.get("gebiet", "")]
+    if w.get("quelle_id") is not None:
+        teile.append(f"Quelle: {quellen.get(w['quelle_id'], f'Nr. {w["quelle_id"]}')}")
+    return ", ".join(t for t in teile if t)
+
+
 def fuellen(abschnitte: dict[str, list[dict]], katalog: dict[str, dict], quellen: dict[int, str],
             belege: set[str]) -> dict:
     """Setzt den Berichtstext zusammen.
@@ -113,11 +125,8 @@ def fuellen(abschnitte: dict[str, list[dict]], katalog: dict[str, dict], quellen
         return f"{text}[^{nr}]"
 
     def verweis(w: dict) -> str:
-        """Rechenweg, Bezeichnung, Quelle und ggf. Rundung im Text. Ausgabe: Text für die Fußnote."""
-        teile = [w.get("rechenweg_text") or w.get("bezeichnung", "")]
-        if w.get("quelle_id") is not None:
-            teile.append(f"Quelle: {quellen.get(w['quelle_id'], f'Nr. {w["quelle_id"]}')}")
-        text = ", ".join(t for t in teile if t)
+        """Beschreibung und ggf. Rundung im Text. Ausgabe: Text für die Fußnote."""
+        text = beschreibung(w, quellen)
         return f"{text}; im Text {anzeigen(w)}" if w.get("einheit") == "km" else text
 
     aus = {}

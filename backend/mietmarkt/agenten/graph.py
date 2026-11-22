@@ -27,7 +27,7 @@ from ..kennzahlen import wohnungsmix
 from ..konfig import Konfig
 from ..mietansatz import Anpassung, Basis, fachregeln_pruefen, herleiten, mit_fortschreibung
 from ..modelle import Herkunft, Projekt, Quelle, Wert, Wohnung
-from .bericht import anzeigen, fuellen, werte_katalog
+from .bericht import anzeigen, beschreibung, fuellen, werte_katalog
 from .kosten import kosten_eur
 from .modelle import Modelle
 from .pruefung import zahlen_pruefen
@@ -81,7 +81,9 @@ PROMPTS = {
                "nur über diesen. Mietansatz: Ansatz zum Stichtag und fortgeschrieben zum Vermarktungsstart, getrennt "
                "für Regelgeschoss/EG und DG, wenn es eine DG-Herleitung gibt. Risiken: nur Sätze, die sich auf einen "
                "Befund (befund:N) oder einen Katalogwert stützen – Ergebnistexte der Agenten und Projektdaten zählen "
-               "dort nicht als Beleg. Gibt es keine Befunde, lass risiken leer; Python ergänzt den Satz dazu. "
+               "dort nicht als Beleg. Ein Risiko-Satz gibt nur wieder, was Befund oder Katalog sagen, ohne eigene "
+               "Wertung, Einschätzung oder Vermutung über die Daten (Stand und Quelle stehen im Katalog). Gibt es "
+               "keine Befunde, lass risiken leer; Python ergänzt den Satz dazu. "
                "Adresse und Stichtag stehen im Berichtskopf. Sachlich, auf Deutsch, ohne Markdown, wenige Sätze je "
                "Abschnitt.",
 }
@@ -151,7 +153,7 @@ class Antwort(BaseModel):
 class Befund(BaseModel):
     """Ein Befund des Prüf-Agenten."""
 
-    pruefung: Literal["anzahl", "alter", "ausreisser_iqr", "abgleich"]
+    pruefung: Literal["anzahl", "alter", "ausreisser_iqr", "abgleich", "dienst"]  # dienst: nur vom Code gesetzt
     schweregrad: Literal["hinweis", "warnung", "kritisch"]
     text: str = Field(description="Was auffällt und warum es zählt")
 
@@ -238,6 +240,29 @@ def _leitplanken(d: Entscheidung, z: AnalyseZustand) -> Entscheidung:
                                     "begruendung": "Leitplanke: Mietansatz erst nach Standort und Marktdaten "
                                                    f"(Modell wollte mietansatz: {d.begruendung})"})
     return d
+
+
+def dienst_befunde(ergebnisse: dict) -> list[dict]:
+    """Ausgefallene externe Dienste als Befunde, im Code ermittelt (nicht dem Modell überlassen).
+
+    Eingabe: Ergebnisse der Agenten. Ausgabe: Befunde (pruefung „dienst“): warnung, wenn ein Werkzeug wegen eines
+    Dienstausfalls ohne Ergebnis blieb (z. B. Overpass → kein Umfeld); hinweis, wenn OSRM fehlte und Entfernungen
+    nur als Luftlinie vorliegen. Ohne Zahlen im Text, damit nichts als unbelegt markiert wird.
+    """
+    aus = []
+    for r in ergebnisse.values():
+        for w in r["werkzeuge"]:
+            e = w["ergebnis"] if w["status"] != "error" and isinstance(w["ergebnis"], dict) else {}
+            if "fehler" in e:
+                was = "Umfeld (ÖPNV, Nahversorgung, Schulen, Kitas, Ärzte)" if w["name"] == "umfeld" else w["name"]
+                aus.append({"pruefung": "dienst", "schweregrad": "warnung", "markierungen": [],
+                            "text": f"{was} nicht verfügbar: {e['fehler'].split(':')[0]}; die Lage ist ohne diese "
+                                    "Angaben beschrieben."})
+            elif any(p.get("methode_fuss") == "Luftlinie" for p in e.get("pois", [])):
+                aus.append({"pruefung": "dienst", "schweregrad": "hinweis", "markierungen": [],
+                            "text": "Routing (OSRM) nicht verfügbar: für einen Teil der Orte gibt es keine Wegezeiten, "
+                                    "nur die Luftlinie."})
+    return aus
 
 
 def freigabe_anwenden(vorschlag: dict, f: Freigabe, fortschreibung: tuple) -> dict | None:
@@ -475,7 +500,8 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
         if antwort["parsed"] is None:
             return {**update, "abbruch": "Antwort des Prüf-Agenten war nicht lesbar"}
         belege = [daten, herleitungen] + [w["ergebnis"] for w in eigene]
-        befunde = [b.model_dump() | {"markierungen": zahlen_pruefen(b.text, belege)} for b in antwort["parsed"].befunde]
+        befunde = [b.model_dump() | {"markierungen": zahlen_pruefen(b.text, belege)} for b in antwort["parsed"].befunde
+                   if b.pruefung != "dienst"] + dienst_befunde(z["ergebnisse"])
         text = "\n".join(f"{b['schweregrad']}: {b['text']}" for b in befunde) or "Keine Befunde."
         update |= {"pruefungen": [befunde], "ergebnisse": {"pruefung": {
             "text": text, "werkzeuge": eigene, "markierungen": [x for b in befunde for x in b["markierungen"]]}}}
@@ -498,8 +524,7 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
         with Session(e) as s:
             quellen = {q.id: f"{q.name}, Stand {q.stand}" if q.stand else q.name
                        for q in s.exec(select(Quelle).where(Quelle.projekt_id == p.id))}
-        zeilen = [f"{{{{wert:{i}}}}} = {anzeigen(w)} – {(w.get('bezeichnung') or w.get('rechenweg_text', ''))[:160]}"
-                  for i, w in katalog.items()]
+        zeilen = [f"{{{{wert:{i}}}}} = {anzeigen(w)} – {beschreibung(w, quellen)[:200]}" for i, w in katalog.items()]
         nummeriert = "\n".join(f"befund:{i} – {b['schweregrad']}: {b['text']}" for i, b in enumerate(befunde, 1))
         eingabe = (f"{daten}\n\nErgebnisse (ergebnis:<agent>):\n{_ergebnistexte(z)}\n\nBefunde der Prüfung:\n"
                    f"{nummeriert or 'keine'}\n\nWerte-Katalog:\n" + "\n".join(zeilen))

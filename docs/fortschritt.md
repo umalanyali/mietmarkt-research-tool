@@ -93,6 +93,10 @@
 - Nach dem Live-Lauf: Methoden nur aus fester Liste (OSRM, Haversine, Quartile inklusiv, Grenze ± 15 %), Formeln
   bleiben in der Fußnote; Risiken nur mit `befund:N` oder Katalog-ID belegt; Einheit im Dativ nach Präposition;
   Markdown maskiert nur Wirksames. Tests: Backend 175 (+1 Live-Test).
+- Dienstausfälle (Overpass, OSRM) als Befund `dienst` im Code; Werte-Katalog und Fußnoten nennen Zeitraum, Gebiet
+  und Quelle mit Stand; Risiken-Prompt ohne eigene Wertungen (Prompt-Regel, nicht maschinell prüfbar). Demo:
+  Einheit „Einwohner“, Baufertigstellungen 2025 für die Stadt; lokale DB angepasst (Sicherung
+  `daten/mietmarkt.vor-m5e.db`). Tests: Backend 179 (+1 Live-Test).
 
 ### Bekannte Punkte (bewusst offen)
 - **S4** Zeitfenster zwischen der Prüfung „wartet auf Freigabe/Antwort“ und dem Fortsetzen: zwei gleichzeitige

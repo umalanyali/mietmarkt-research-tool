@@ -49,13 +49,14 @@ def db(tmp_path):
     return e
 
 
-def geodienste_mocken():
-    """Overpass liefert eine Haltestelle, OSRM 120 s zu Fuß und 60 s mit dem Rad."""
-    respx.post(dienste.OVERPASS_URL).mock(return_value=httpx.Response(200, json={"elements": [
+def geodienste_mocken(overpass: int = 200, routing: int = 200):
+    """Overpass liefert eine Haltestelle, OSRM 120 s zu Fuß und 60 s mit dem Rad. Eingabe: HTTP-Status je Dienst
+    (z. B. 503 = Ausfall)."""
+    respx.post(dienste.OVERPASS_URL).mock(return_value=httpx.Response(overpass, json={"elements": [
         {"type": "node", "lat": 51.3130, "lon": 9.4800, "tags": {"highway": "bus_stop", "name": "Lindenplatz"}}]}))
     for profil, dauer in (("fuss", 120.0), ("rad", 60.0)):
-        respx.get(url__startswith=dienste.ROUTING_URL[profil]).mock(
-            return_value=httpx.Response(200, json={"code": "Ok", "durations": [[0, dauer]], "distances": [[0, 150.0]]}))
+        respx.get(url__startswith=dienste.ROUTING_URL[profil]).mock(return_value=httpx.Response(
+            routing, json={"code": "Ok", "durations": [[0, dauer]], "distances": [[0, 150.0]]}))
 
 
 def voller_lauf(*nach_freigabe: AIMessage):
@@ -491,3 +492,29 @@ def test_absturz_in_der_korrektur_verliert_keine_kosten(db):
     z = asyncio.run(g.aget_state(konf)).values
     assert z["bericht"]["markierungen"] == [] and z["bericht"]["korrektur"] == ["300", "18,00"]
     assert "entwurf" not in z["bericht"]
+
+
+
+@respx.mock
+@pytest.mark.parametrize(("overpass", "routing", "erwartet"), [
+    (503, 200, ("warnung", "Umfeld")), (200, 503, ("hinweis", "Routing"))])
+def test_ausgefallener_dienst_wird_befund(db, overpass, routing, erwartet):
+    """Fällt Overpass aus (kein Umfeld) oder OSRM (nur Luftlinie), meldet die Prüfung das als eigenen Befund – im
+    Code, nicht vom Modell –, damit es unter Risiken erscheinen kann (Beleg befund:N)."""
+    geodienste_mocken(overpass=overpass, routing=routing)
+    z = laufen(graph(voller_lauf(befunde("hinweis"), BERICHT), db), startzustand(1))
+    dienst = [b for b in z["pruefungen"][-1] if b["pruefung"] == "dienst"]
+    assert [(b["schweregrad"], b["text"].split()[0]) for b in dienst] == [erwartet]
+    assert dienst[0]["markierungen"] == [] and z["bericht"]["befunde"][-1] == dienst[0]
+
+
+@respx.mock
+def test_bericht_agent_sieht_gebiet_zeitraum_und_quelle(db):
+    """Der Werte-Katalog nennt zu jeder Kennzahl Zeitraum, Gebiet und Quelle mit Stand – sonst erfindet das Modell
+    das Gebiet („im Ortsteil“) oder hält ein Bezugsjahr für unbekannt."""
+    geodienste_mocken()
+    m = voller_lauf()
+    laufen(graph(m, db), startzustand(1))
+    katalog = m.stark.aufrufe[-1][-1].text
+    assert "Mietspiegel Ø Nettokaltmiete, Stadt, Quelle: Mietspiegel Musterstadt, Stand 2026" in katalog
+    assert "Baufertigstellungen Wohnungen, 2025, Stadt, Quelle: Statistisches Landesamt" in katalog

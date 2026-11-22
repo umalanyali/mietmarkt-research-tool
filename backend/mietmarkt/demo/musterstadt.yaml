@@ -53,8 +53,8 @@ projekte:
   - {nr: 12, objekt: Gartenstraße 40, anbieter: Musterstadt Living, typ: Regel, zimmer: 2, baujahr: 2026, wohnflaeche: 49.5, kaltmiete: 895, ebk: true, online_seit: '2026-10-20', anfragen: 22, lat: 51.315395,
     lon: 9.50485, gemerkt: false, quelle: IS24-Exposés, fundstelle: 'Exposé Gartenstraße 40, S. 1'}
   kennzahlen:
-  - {gruppe: soziodemografie, bezeichnung: Einwohner, kategorie: '', gebiet: Ortsteil Nordstadt, wert: 18460, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
-  - {gruppe: soziodemografie, bezeichnung: Einwohner, kategorie: '', gebiet: Stadt, wert: 204300, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
+  - {gruppe: soziodemografie, bezeichnung: Einwohner, kategorie: '', gebiet: Ortsteil Nordstadt, wert: 18460, einheit: Einwohner, stellen: 0, herkunft: import, quelle: RIWIS}
+  - {gruppe: soziodemografie, bezeichnung: Einwohner, kategorie: '', gebiet: Stadt, wert: 204300, einheit: Einwohner, stellen: 0, herkunft: import, quelle: RIWIS}
   - {gruppe: soziodemografie, bezeichnung: Haushalte, kategorie: '', gebiet: Ortsteil Nordstadt, wert: 9870, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
   - {gruppe: soziodemografie, bezeichnung: Haushalte, kategorie: '', gebiet: Stadt, wert: 108900, einheit: '', stellen: 0, herkunft: import, quelle: RIWIS}
   - {gruppe: soziodemografie, bezeichnung: Ø Personen je HH, kategorie: '', gebiet: Ortsteil Nordstadt, wert: 1.87, einheit: '', stellen: 2, herkunft: import, quelle: RIWIS}
@@ -134,8 +134,8 @@ projekte:
   - {gruppe: value_tabelle, bezeichnung: Median, kategorie: 5+ Zi., gebiet: Umkreis 2 km, wert: 15.9, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
   - {gruppe: value_tabelle, bezeichnung: P75, kategorie: 5+ Zi., gebiet: Umkreis 2 km, wert: 17.2, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
   - {gruppe: value_tabelle, bezeichnung: Max, kategorie: 5+ Zi., gebiet: Umkreis 2 km, wert: 19.8, einheit: €/m², stellen: 2, herkunft: import, quelle: VALUE}
-  - {gruppe: weitere, bezeichnung: Einwohner Ortsteil Nordstadt, kategorie: '', gebiet: '', wert: 18460, einheit: '', stellen: 0, herkunft: manuell, quelle: Statistikamt Musterstadt}
-  - {gruppe: weitere, bezeichnung: Baufertigstellungen Wohnungen, kategorie: '', gebiet: '', wert: 1240, einheit: '', stellen: 0, herkunft: manuell, quelle: Statistisches Landesamt}
-  - {gruppe: weitere, bezeichnung: Mietspiegel Ø Nettokaltmiete, kategorie: '', gebiet: '', wert: 9.85, einheit: €/m², stellen: 2, herkunft: manuell, quelle: Mietspiegel Musterstadt}
+  - {gruppe: weitere, bezeichnung: Einwohner Ortsteil Nordstadt, kategorie: '', gebiet: '', wert: 18460, einheit: Einwohner, stellen: 0, herkunft: manuell, quelle: Statistikamt Musterstadt}
+  - {gruppe: weitere, bezeichnung: Baufertigstellungen Wohnungen, kategorie: '2025', gebiet: Stadt, wert: 1240, einheit: Wohnungen, stellen: 0, herkunft: manuell, quelle: Statistisches Landesamt}
+  - {gruppe: weitere, bezeichnung: Mietspiegel Ø Nettokaltmiete, kategorie: '', gebiet: Stadt, wert: 9.85, einheit: €/m², stellen: 2, herkunft: manuell, quelle: Mietspiegel Musterstadt}
 - {name: Hafenblock, adresse: Kaistraße 8, plz: '12349', ort: Musterstadt, ortsteil: Hafen, lat: 51.3226, lon: 9.4583, stichtag: '2026-11-01', analysiert_am: '2026-11-07'}
 - {name: Am Stadtpark, adresse: Parkring 61, plz: '23456', ort: Beispielheim, ortsteil: Zentrum, lat: 51.3028, lon: 9.5043, stichtag: '2026-10-27', analysiert_am: '2026-10-29'}

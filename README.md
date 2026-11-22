@@ -93,7 +93,8 @@ Antworten des Nutzers gelten bei der Zahlenprüfung als belegt.
   neuer Basis bzw. neuen Zu-/Abschlägen neu (geänderte Werte Herkunft `manuell`, unveränderte bleiben `ki`),
   `ablehnen` (Kommentar Pflicht) schickt den Kommentar über den Supervisor an den Mietansatz-Agenten. Der angehaltene
   Lauf überlebt einen Neustart der App.
-- **Prüfung:** Bei einem kritischen Befund verfallen Freigabe und Mietansatz, es geht zum Supervisor zurück. Nach
+- **Prüfung:** Ausgefallene Dienste meldet der Code selbst als Befund `dienst` (Overpass weg → warnung, kein
+  Umfeld; OSRM weg → hinweis, nur Luftlinie), damit sie unter Risiken stehen können. Bei einem kritischen Befund verfallen Freigabe und Mietansatz, es geht zum Supervisor zurück. Nach
   2 Prüfrunden geht es auch bei „kritisch“ zum Bericht; der Befund steht dann unter Risiken.
 - **Bericht:** Das Modell schreibt je Abschnitt Sätze mit Belegen (Katalog-ID, `befund:N`, `ergebnis:<agent>`,
   `freigabe`, `projekt`; unter Risiken nur `befund:N` und Katalog-IDs); Sätze ohne gültigen Beleg streicht Python. Zahlwörter („drei“, „zwölf“, „Hälfte“) zählen

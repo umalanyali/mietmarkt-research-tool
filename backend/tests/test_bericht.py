@@ -182,3 +182,14 @@ def test_markdown_maskiert_modelltext_und_erklaert_markierungen():
     assert "Lindenquartier \\[x\\](javascript:y)" in md and "Siehe \\!\\[bild\\](https" in md
     assert "rund [?] €/m²" in md and "(2-mal)" in md  # [?] und runde Klammern bleiben unmaskiert
     assert "[?] steht für eine Zahl ohne Herkunft" in md and "1 Aussage ohne Beleg gestrichen" in md
+
+
+def test_fussnote_nennt_zeitraum_gebiet_und_quelle():
+    """Importierte Kennzahlen: Bezeichnung, Zeitraum (kategorie), Gebiet und Quelle mit Stand in der Fußnote."""
+    k = {"bau": {"wert": 1240, "einheit": "Wohnungen", "herkunft": "manuell", "quelle_id": 7,
+                 "bezeichnung": "Baufertigstellungen Wohnungen", "kategorie": "2025", "gebiet": "Stadt"}}
+    b = fuellen({"markt": saetze("{{wert:bau}} fertiggestellt.")}, k, {7: "Statistisches Landesamt, Stand 2025"},
+                {"projekt"})
+    assert b["abschnitte"]["markt"] == "1.240 Wohnungen[^1] fertiggestellt."
+    assert b["fussnoten"][0]["verweis"] == ("Baufertigstellungen Wohnungen, 2025, Stadt, "
+                                            "Quelle: Statistisches Landesamt, Stand 2025")
