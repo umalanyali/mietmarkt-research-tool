@@ -62,3 +62,51 @@
   ladende Bilder/Links anzeigen – nie `dangerouslySetInnerHTML`. Sonst bekäme eine Prompt-Injection (z. B. über
   OSM-Namen oder Importtexte) einen Kanal nach außen (Bild-URL mit Daten als Parameter). Markierte Zahlen
   (`markierungen`, Herkunft ki) sichtbar kennzeichnen, auch in Supervisor-Begründungen.
+
+## M5b – Freigabe, Prüfung und Bericht (22.11.2026)
+- Human-in-the-Loop: Knoten `freigabe` mit `interrupt(…, response_schema=Freigabe)`; `POST /api/laeufe/{id}/freigabe`
+  setzt mit `Command(resume=…)` fort (annehmen, aendern → Herkunft manuell, ablehnen mit Kommentar → Supervisor).
+- Prüf-Agent: Regeln in `mietmarkt/plausibilitaet.py` (unter 5 Comps, älter als 12 Monate, IQR-Ausreißer, Ansatz
+  > 15 % von Kennzahl); der Code ruft die Prüfwerkzeuge immer auf, das Modell vergibt Schweregrade. Kritisch →
+  zurück zum Supervisor, höchstens 2 Prüfrunden.
+- Bericht-Agent mit Platzhaltern `{{wert:ID}}`; Python füllt Werte mit Fußnote zur Herkunft und entfernt freie
+  Zahlen. Export Markdown und PowerPoint (python-pptx) unter `GET /api/laeufe/{id}/bericht.md|.pptx`.
+- Neue Ereignisse `wartet_auf_freigabe`, `freigabe`, `pruefung`, `bericht`; Status `rueckfrage` im Endstand.
+- Tests: Backend 152 (+1 Live-Test, angepasst, noch nicht echt gelaufen).
+- Rückfrage des Supervisors hält den Lauf an (`interrupt`), `POST /api/laeufe/{id}/antwort` setzt fort.
+- Bericht: eine Korrekturrunde bei freien Zahlen, erst danach `[?]`.
+- Tests: Backend 154 (+1 Live-Test).
+- Bericht nach dem Live-Lauf überarbeitet: Entfernungen „rd. 230 m“, Sätze mit Belegen (unbelegte gestrichen),
+  Zahlwörter wie Ziffern, gleiche Fußnoten zusammengelegt, wiederkehrende Methoden einmal erklärt.
+- Mietansatz: Fortschreibung bis Vermarktungsstart (1 + g)^(Monate/12); Projektfelder `vermarktungsstart`,
+  `mietwachstum_pa`, Standard `MIETWACHSTUM_PA`; Tabelle `wohnung` (Wohnungsmix), Demo mit 4 DG-Wohnungen;
+  DG-Herleitung Pflicht bei DG im Mix; Vorschlag und Freigabe je Basis.
+- Lokale DB per `ALTER TABLE` ergänzt (Sicherung `daten/mietmarkt.vor-m5c.db`).
+- Tests: Backend 163 (+1 Live-Test).
+- Review-Befunde behoben (python-reviewer P1, P2–P9, P14, P16–P18; security-reviewer S1–S3):
+  Mietansatz erst nach Standort und Marktdaten; Freigabe des Laufs als Hintergrundaufgabe der Antwort (kein
+  Hängen bei sofortigem Verbindungsabbruch); höchstens 10 Zu-/Abschläge, Name 80 und Begründung 500 Zeichen;
+  genau 15 % nicht auffällig; Korrektur des Berichts als eigener Knoten (Kosten gesichert); kaufmännische Rundung
+  in `de()` und Stellen der Quelle; Rundenlimit als Abbruch; Markdown-Export maskiert Modelltext und erklärt
+  „[?]“; IQR unter 4 Comps „nicht prüfbar“; Export ohne Projekt 404; „aendern“ ohne Inhalt ungültig.
+- Tests: Backend 173 (+1 Live-Test).
+- Nach dem Live-Lauf: Methoden nur aus fester Liste (OSRM, Haversine, Quartile inklusiv, Grenze ± 15 %), Formeln
+  bleiben in der Fußnote; Risiken nur mit `befund:N` oder Katalog-ID belegt; Einheit im Dativ nach Präposition;
+  Markdown maskiert nur Wirksames. Tests: Backend 175 (+1 Live-Test).
+
+### Bekannte Punkte (bewusst offen)
+- **S4** Zeitfenster zwischen der Prüfung „wartet auf Freigabe/Antwort“ und dem Fortsetzen: zwei gleichzeitige
+  POSTs können beide die Prüfung bestehen; praktisch nur, wenn der erste Lauf ohne Modellaufruf sofort endet.
+  Abhilfe später: Prüfung und `aktive_laeufe.add` vor das erste `await` ziehen.
+- **P10** Werte-Katalog: mehrere `comps_filtern`-Aufrufe mit unterschiedlichem Filter überschreiben sich je
+  Listenposition (IDs ohne Aufrufindex).
+- **P11** VALUE-Vergleichswerte aus `ansatz_pruefen` haben im Katalog keine Beschreibung (kein `rechenweg_text`).
+- **P12** Ein Supervisor, der stur „fertig“ mit Rückfrage antwortet, fragt bis zum Rundenlimit erneut (begrenzt,
+  aber bis zu 6 bezahlte Aufrufe). Der Docstring von `_leitplanken` ist angepasst.
+- **P13** `recursion_limit` (80) gilt je Aufruf bzw. Fortsetzung, nicht je Lauf; die Agent-Werkzeug-Schleife
+  begrenzen nur Budget und Nutzer.
+- **P15** „Älter als 12 Monate“ ist als mehr als 365 Tage umgesetzt; im Schaltjahr gilt ein Angebot von genau
+  12 Monaten schon als veraltet.
+- **S5** Der Portal-Filter lässt bei Demo-Projekten alle Einträge durch. Heute kein Weg dahin (kein Import-
+  Endpunkt); ein künftiger Import muss Demo-Projekte sperren oder je Eintrag filtern.
+- Offen: Freigabe-Karte, Antwortfeld und Zeitleiste im Frontend.

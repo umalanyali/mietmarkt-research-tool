@@ -5,22 +5,25 @@ import logging
 import uuid
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from langgraph.types import Command
 from pydantic import BaseModel
 from sqlmodel import Session, select
+from starlette.background import BackgroundTask
 
 from mietmarkt import __version__
 from mietmarkt.agenten.ereignisse import ereignisse
-from mietmarkt.agenten.graph import baue_graph, lauf_konfig, startzustand
+from mietmarkt.agenten.graph import Antwort, Freigabe, baue_graph, lauf_konfig, startzustand
 from mietmarkt.agenten.modelle import Modelle, aus_konfig
 from mietmarkt.comps import im_umkreis
 from mietmarkt.db import datenbankpfad, engine
+from mietmarkt.export import markdown, pptx
 from mietmarkt.geo import entfernung_km
 from mietmarkt.geo.dienste import (
     ATTRIBUTION,
@@ -262,43 +265,36 @@ def _sse(ereignis: dict) -> str:
     return f"event: {ereignis['typ']}\ndata: {json.dumps(ereignis, ensure_ascii=False, default=str)}\n\n"
 
 
-@app.get("/api/laeufe/{lauf_id}/ereignisse")
-async def lauf_ereignisse(lauf_id: str, s: Sitzung, k: KonfigDep, m: Annotated[Modelle | None, Depends(ki_modelle)],
-                          pfad: Annotated[Path, Depends(checkpoint_pfad)]) -> StreamingResponse:
-    """Führt den Lauf aus und streamt seine Ereignisse (Server-Sent Events), zum Schluss „fertig“ mit Endstand.
-
-    Eingabe: Lauf-ID. Ausgabe: text/event-stream. Ein neuer Lauf startet, ein unterbrochener (Absturz, Neustart,
-    abgerissene Verbindung) wird am letzten Checkpoint fortgesetzt, ein beendeter liefert nur den Endstand.
-    """
+def _lauf(s: Session, lauf_id: str) -> Lauf:
+    """Lädt einen Lauf oder meldet 404. Eingabe: Sitzung, Lauf-ID. Ausgabe: Lauf."""
     lauf = s.get(Lauf, lauf_id)
     if lauf is None:
         raise HTTPException(status_code=404, detail=f"Lauf {lauf_id} nicht gefunden")
-    if lauf.ergebnis:  # beendet: Endstand aus der Tabelle, ohne Modell und ohne Schlüssel
-        return StreamingResponse(iter([_sse(json.loads(lauf.ergebnis))]), media_type="text/event-stream")
-    if m is None:
-        raise HTTPException(status_code=503, detail=k.ki_problem)
+    return lauf
+
+
+def _ausfuehren(lauf: Lauf, e, k: Konfig, m: Modelle, pfad: Path, fortsetzung: Command | None) -> StreamingResponse:
+    """Führt einen Lauf aus bzw. fort und streamt seine Ereignisse; zum Schluss „fertig“ mit Endstand.
+
+    Eingabe: Lauf, Engine, Konfig, Modelle, Checkpoint-Datei, Command(resume=Freigabe) oder None.
+    Ausgabe: text/event-stream (409, wenn der Lauf schon läuft). Ohne Fortsetzung startet ein neuer Lauf, ein
+    unterbrochener (Absturz, Neustart, abgerissene Verbindung) geht am letzten Checkpoint weiter, und ein
+    angehaltener meldet erneut „wartet_auf_freigabe“. Hält der Lauf an, endet der Strom ohne „fertig“.
+    """
+    lauf_id, projekt_id = lauf.id, lauf.projekt_id
     if lauf_id in aktive_laeufe:
         raise HTTPException(status_code=409, detail="Dieser Lauf läuft bereits")
-    e, projekt_id = s.get_bind(), lauf.projekt_id  # die Sitzung endet vor dem Strom; die Engine bleibt
     # Eintragen ohne await dazwischen: zwei gleichzeitige Anfragen können nicht beide durch die Prüfung kommen
     aktive_laeufe.add(lauf_id)
-
-    async def strom() -> AsyncIterator[str]:
-        """Erzeugt die SSE-Blöcke und gibt den Lauf am Ende wieder frei. Ausgabe: Text je Ereignis."""
-        try:
-            async for block in _ablauf():
-                yield block
-        finally:
-            aktive_laeufe.discard(lauf_id)
 
     async def _ablauf() -> AsyncIterator[str]:
         """Führt den Graphen aus bzw. fort. Ausgabe: Text je Ereignis."""
         async with AsyncSqliteSaver.from_conn_string(str(pfad)) as cp:
             graph, konf = baue_graph(m, e, k, cp), lauf_konfig(lauf_id)
             stand = await graph.aget_state(konf)
-            # stand.values leer: noch nie gelaufen; stand.next nicht leer: mittendrin unterbrochen
-            if not stand.values or stand.next:
-                eingabe = None if stand.values else startzustand(projekt_id)
+            # stand.values leer: noch nie gelaufen; stand.next nicht leer: unterbrochen oder angehalten
+            if fortsetzung or not stand.values or stand.next:
+                eingabe = fortsetzung or (None if stand.values else startzustand(projekt_id))
                 try:
                     async for modus, daten in graph.astream(eingabe, konf, stream_mode=["updates", "messages"]):
                         for ereignis in ereignisse(modus, daten):
@@ -309,12 +305,18 @@ async def lauf_ereignisse(lauf_id: str, s: Sitzung, k: KonfigDep, m: Annotated[M
                     yield _sse({"typ": "fehler", "meldung": f"Lauf unterbrochen ({type(f).__name__}). Erneuter Abruf "
                                                             "setzt ihn am letzten Schritt fort; Details im Server-Log."})
                     return
-            ende = (await graph.aget_state(konf)).values
+            stand = await graph.aget_state(konf)
+            if stand.next:  # wartet auf Freigabe oder Antwort; das Ereignis ist schon gesendet, der Checkpoint bleibt
+                return
+            ende = stand.values
             schluss = {"typ": "fertig", "status": "abgebrochen" if ende.get("abbruch") else "fertig",
-                       "abbruch": ende.get("abbruch"), "offene_rueckfragen": ende["offene_rueckfragen"],
+                       "abbruch": ende.get("abbruch"),
+                       "rueckfragen": [{"frage": f, "antwort": a} for f, a in
+                                       zip(ende["rueckfragen"], ende.get("antworten", []), strict=False)],
                        "kosten_eur": sum(x["eur"]["wert"] for x in ende["kosten"]),
                        "ergebnisse": {a: {"text": r["text"], "markierungen": r["markierungen"]}
-                                      for a, r in ende["ergebnisse"].items()}}
+                                      for a, r in ende["ergebnisse"].items()},
+                       "freigabe": ende.get("freigabe"), "bericht": ende.get("bericht")}
             # Erst speichern, dann senden (bricht die Verbindung beim Senden ab, ist der Endstand trotzdem da).
             # Danach wird der Checkpoint nicht mehr gebraucht; so wächst checkpoints.db nicht mit jedem Lauf.
             with Session(e) as s2:
@@ -324,4 +326,85 @@ async def lauf_ereignisse(lauf_id: str, s: Sitzung, k: KonfigDep, m: Annotated[M
             await cp.adelete_thread(lauf_id)
             yield _sse(schluss)
 
-    return StreamingResponse(strom(), media_type="text/event-stream")
+    # Freigeben als Hintergrundaufgabe der Antwort, nicht im Generator: Trennt der Browser die Verbindung, bevor der
+    # erste Block gesendet ist, startet der Generator nie (kein finally) – die Hintergrundaufgabe läuft trotzdem (S1)
+    return StreamingResponse(_ablauf(), media_type="text/event-stream",
+                             background=BackgroundTask(aktive_laeufe.discard, lauf_id))
+
+
+ModelleDep = Annotated[Modelle | None, Depends(ki_modelle)]
+PfadDep = Annotated[Path, Depends(checkpoint_pfad)]
+
+
+@app.get("/api/laeufe/{lauf_id}/ereignisse")
+async def lauf_ereignisse(lauf_id: str, s: Sitzung, k: KonfigDep, m: ModelleDep, pfad: PfadDep) -> StreamingResponse:
+    """Führt den Lauf aus und streamt seine Ereignisse (Server-Sent Events).
+
+    Eingabe: Lauf-ID. Ausgabe: text/event-stream; ein beendeter Lauf liefert nur den Endstand (ohne Modell und
+    Schlüssel). 404 unbekannt, 503 ohne KI, 409 läuft schon.
+    """
+    lauf = _lauf(s, lauf_id)
+    if lauf.ergebnis:
+        return StreamingResponse(iter([_sse(json.loads(lauf.ergebnis))]), media_type="text/event-stream")
+    if m is None:
+        raise HTTPException(status_code=503, detail=k.ki_problem)
+    return _ausfuehren(lauf, s.get_bind(), k, m, pfad, None)
+
+
+async def _fortsetzen(s: Session, lauf_id: str, knoten: str, wert: dict, k: Konfig, m: Modelle | None,
+                      pfad: Path) -> StreamingResponse:
+    """Setzt einen Lauf fort, der an `knoten` angehalten ist (freigabe oder rueckfrage).
+
+    Eingabe: Sitzung, Lauf-ID, Knoten, Fortsetzungswert, Konfig, Modelle, Checkpoint-Datei.
+    Ausgabe: Ereignisstrom wie /ereignisse. 404 unbekannt, 503 ohne KI, 409 wartet dort nicht (nicht gestartet,
+    läuft, wartet auf etwas anderes oder beendet).
+    """
+    lauf = _lauf(s, lauf_id)
+    if m is None:
+        raise HTTPException(status_code=503, detail=k.ki_problem)
+    async with AsyncSqliteSaver.from_conn_string(str(pfad)) as cp:
+        stand = await baue_graph(m, s.get_bind(), k, cp).aget_state(lauf_konfig(lauf_id))
+    if lauf.ergebnis or stand.next != (knoten,):
+        art = "eine Freigabe" if knoten == "freigabe" else "eine Antwort"
+        raise HTTPException(status_code=409, detail=f"Lauf wartet nicht auf {art}")
+    if knoten == "freigabe":  # Änderungen nur für Basen, die der Vorschlag enthält (sonst gingen sie still verloren)
+        fremd = set(wert.get("aenderungen") or {}) - set(stand.interrupts[0].value["vorschlag"]["herleitungen"])
+        if fremd:
+            raise HTTPException(status_code=422, detail=f"Keine Herleitung für {', '.join(sorted(fremd))} im Vorschlag")
+    return _ausfuehren(lauf, s.get_bind(), k, m, pfad, Command(resume=wert))
+
+
+@app.post("/api/laeufe/{lauf_id}/freigabe")
+async def lauf_freigabe(lauf_id: str, f: Freigabe, s: Sitzung, k: KonfigDep, m: ModelleDep,
+                        pfad: PfadDep) -> StreamingResponse:
+    """Entscheidung des Nutzers zum Mietansatz-Vorschlag; setzt den angehaltenen Lauf fort und streamt weiter.
+
+    Eingabe: Lauf-ID, {aktion: annehmen | aendern | ablehnen, aenderungen?, kommentar?}. Ausgabe: text/event-stream.
+    422 bei unvollständiger Freigabe; sonst wie _fortsetzen.
+    """
+    return await _fortsetzen(s, lauf_id, "freigabe", f.model_dump(), k, m, pfad)
+
+
+@app.post("/api/laeufe/{lauf_id}/antwort")
+async def lauf_antwort(lauf_id: str, a: Antwort, s: Sitzung, k: KonfigDep, m: ModelleDep,
+                       pfad: PfadDep) -> StreamingResponse:
+    """Antwort des Nutzers auf eine Rückfrage des Supervisors; der Lauf geht beim Supervisor weiter.
+
+    Eingabe: Lauf-ID, {antwort}. Ausgabe: text/event-stream. 422 bei leerer Antwort; sonst wie _fortsetzen.
+    """
+    return await _fortsetzen(s, lauf_id, "rueckfrage", a.model_dump(), k, m, pfad)
+
+
+@app.get("/api/laeufe/{lauf_id}/bericht.{art}")
+def bericht_export(lauf_id: str, art: Literal["md", "pptx"], s: Sitzung) -> Response:
+    """Bericht eines fertigen Laufs zum Herunterladen. Eingabe: Lauf-ID, md oder pptx. Ausgabe: Datei oder 404."""
+    lauf = _lauf(s, lauf_id)
+    b = json.loads(lauf.ergebnis).get("bericht") if lauf.ergebnis else None
+    if not b:
+        raise HTTPException(status_code=404, detail="Kein Bericht: Lauf ist nicht fertig oder endete ohne Bericht")
+    p = _projekt(s, lauf.projekt_id)  # 404, falls das Projekt inzwischen gelöscht ist
+    kopf = {"Content-Disposition": f'attachment; filename="mietmarktbericht-{lauf_id[:8]}.{art}"'}
+    if art == "md":
+        return Response(markdown(p, b), media_type="text/markdown; charset=utf-8", headers=kopf)
+    return Response(pptx(p, b), headers=kopf,
+                    media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation")

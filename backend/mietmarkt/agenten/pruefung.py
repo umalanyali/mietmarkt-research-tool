@@ -8,7 +8,7 @@ from ..modelle import Herkunft, Wert
 # Zahl mit optionalem Vorzeichen (+, -, −; auch „+ 0,30“). Steht direkt davor ein Buchstabe oder eine Ziffer
 # („2-Zimmer“, „12-14“), ist der Strich kein Vorzeichen; ein Bindestrich nach „Zahl Leerzeichen“ ist eine Spanne
 # („13,9 - 24,1“). Das echte Minus „−“ und „+“ (so schreibt sie herleiten) gelten dort weiter als Vorzeichen.
-_ZAHL = re.compile(r"(?:(?<!\w)((?<!\d\s)-|[−+])\s?)?(\d[\d.,]*\d|\d)")
+ZAHL = re.compile(r"(?:(?<!\w)((?<!\d\s)-|[−+])\s?)?(\d[\d.,]*\d|\d)")
 _DEUTSCH = re.compile(r"\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:,\d+)?")
 _PUNKT = re.compile(r"\d+(?:\.\d+)?")
 # Felder, deren Zahlen nichts Fachliches belegen: sonst „belegt“ etwa lon 13,6 einen Mietansatz von 14 €/m²
@@ -51,7 +51,7 @@ def _belegwerte(beleg: object, werte: set[Decimal]) -> set[Decimal]:
     elif isinstance(beleg, int | float) and not isinstance(beleg, bool):
         werte.add(Decimal(repr(beleg)))
     elif isinstance(beleg, str):
-        werte.update(_mit_vorzeichen(z, b) for z, roh in _ZAHL.findall(beleg) for b, _ in _lesarten(roh))
+        werte.update(_mit_vorzeichen(z, b) for z, roh in ZAHL.findall(beleg) for b, _ in _lesarten(roh))
     return werte
 
 
@@ -76,7 +76,7 @@ def zahlen_pruefen(text: str, belege: list[object]) -> list[dict]:
     for beleg in belege:
         _belegwerte(beleg, bekannt)
     markierungen = []
-    for treffer in _ZAHL.finditer(text):
+    for treffer in ZAHL.finditer(text):
         zeichen, roh = treffer.groups()
         lesarten = _lesarten(roh)
         if lesarten and not any(_belegt(zeichen, b, stellen, bekannt) for b, stellen in lesarten):

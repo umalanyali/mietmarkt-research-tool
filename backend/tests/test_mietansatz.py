@@ -72,3 +72,55 @@ def test_ohne_anpassungen_klarer_rechenweg():
     from mietmarkt.modelle import Herkunft, Wert
     h = herleiten(Wert(wert=16.96, einheit="€/m²", herkunft=Herkunft.BERECHNET, rechenweg_text="Basis"), [])
     assert h.ergebnis.wert == 16.96 and h.ergebnis.rechenweg_text == "16,96 €/m² (keine Zu- oder Abschläge)"
+
+
+def test_fortschreibung_bis_vermarktungsstart():
+    """Ansatz × (1 + g)^(Monate/12), volle Kalendermonate vom Stichtag bis zum Vermarktungsstart; eigener Schritt."""
+    import datetime as dt
+
+    from mietmarkt.mietansatz import mit_fortschreibung
+    basis = Wert(wert=16.96, einheit="€/m²", herkunft="berechnet", rechenweg_text="Ø Comps")
+    h = mit_fortschreibung(herleiten(basis, []), dt.date(2026, 11, 4), dt.date(2027, 9, 1), 0.02)
+    assert h.ergebnis.wert == pytest.approx(16.96)  # Ansatz zum Stichtag bleibt (Grundlage der Prüfung)
+    assert h.fortgeschrieben.wert == pytest.approx(16.96 * 1.02 ** (10 / 12))
+    assert [s.art for s in h.schritte] == ["basis", "ergebnis", "fortschreibung"]
+    assert "(1 + 2,0 %)^(10/12)" in h.fortgeschrieben.rechenweg_text and "01.09.2027" in h.fortgeschrieben.rechenweg_text
+
+
+def test_ohne_vermarktungsstart_keine_fortschreibung():
+    """Fehlt der Vermarktungsstart oder liegt er nicht nach dem Stichtag, bleibt die Kette unverändert."""
+    import datetime as dt
+
+    from mietmarkt.mietansatz import mit_fortschreibung
+    h = herleiten(Wert(wert=16.96, einheit="€/m²", herkunft="berechnet"), [])
+    for start in (None, dt.date(2026, 11, 1)):
+        aus = mit_fortschreibung(h, dt.date(2026, 11, 4), start, 0.02)
+        assert aus.fortgeschrieben is None and [s.art for s in aus.schritte] == ["basis", "ergebnis"]
+
+
+def test_anpassung_hat_laengengrenzen():
+    """S2: Name höchstens 80, Begründung höchstens 500 Zeichen – auch für Werkzeugaufrufe des Modells."""
+    with pytest.raises(ValueError):
+        Anpassung(name="x" * 81, betrag=0.5, begruendung="ok")
+    with pytest.raises(ValueError):
+        Anpassung(name="Lage", betrag=0.5, begruendung="x" * 501)
+
+
+def test_freigabe_grenzen_und_aendern_ohne_inhalt():
+    """S2: höchstens 10 Zu-/Abschläge je Basis; P18: „aendern“ ohne Basiswert und ohne Anpassungen ist ungültig."""
+    from mietmarkt.agenten.graph import Freigabe
+    a = {"name": "Lage", "betrag": 0.1, "begruendung": "Park vor der Tür, Comps an der Hauptstraße"}
+    Freigabe(aktion="aendern", aenderungen={"regel_eg": {"anpassungen": [a] * 10}})
+    with pytest.raises(ValueError):
+        Freigabe(aktion="aendern", aenderungen={"regel_eg": {"anpassungen": [a] * 11}})
+    with pytest.raises(ValueError, match="Basiswert oder Anpassungen"):
+        Freigabe(aktion="aendern", aenderungen={"regel_eg": {}})
+
+
+def test_werkzeug_nimmt_hoechstens_zehn_anpassungen():
+    """S2: Das Werkzeugschema begrenzt die Liste, damit auch das Modell keine riesigen Ketten schickt."""
+    from mietmarkt.agenten.werkzeuge import werkzeuge
+    from mietmarkt.db import engine
+    from mietmarkt.konfig import Konfig
+    w = next(t for t in werkzeuge(engine(), Konfig(_env_file=None))["mietansatz"] if t.name == "mietansatz_herleiten")
+    assert w.tool_call_schema.model_json_schema()["properties"]["anpassungen"]["maxItems"] == 10

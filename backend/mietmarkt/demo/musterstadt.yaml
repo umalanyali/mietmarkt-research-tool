@@ -13,6 +13,13 @@ projekte:
   lon: 9.4797
   stichtag: '2026-11-04'
   analysiert_am: '2026-11-11'
+  vermarktungsstart: '2027-09-01'
+  mietwachstum_pa: 0.02
+  wohnungsmix:  # 28 Wohnungen, davon 4 im DG
+  - {typ: EG, zimmer: 2, wohnflaeche: 61.5, anzahl: 4}
+  - {typ: Regel, zimmer: 2, wohnflaeche: 63.0, anzahl: 12}
+  - {typ: Regel, zimmer: 3, wohnflaeche: 79.5, anzahl: 8}
+  - {typ: DG, zimmer: 3, wohnflaeche: 88.0, anzahl: 4}
   quellen:
   - {name: RIWIS, art: datei, datei: RIWIS-Marktmonitor PLZ 12345.png, stand: 11/2026, abgerufen_am: '2026-11-11'}
   - {name: VALUE, art: datei, datei: VALUE-Export Q3-2026.csv, stand: Q3/2026, abgerufen_am: '2026-11-08'}

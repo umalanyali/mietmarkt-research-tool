@@ -9,8 +9,9 @@ from langgraph.graph.message import add_messages
 
 
 def _zusammenfuehren(alt: dict, neu: dict) -> dict:
-    """Reducer für Ergebnisse: neue Agenten-Ergebnisse ergänzen bzw. ersetzen alte. Ausgabe: zusammengeführtes dict."""
-    return {**alt, **neu}
+    """Reducer für Ergebnisse: neue Agenten-Ergebnisse ergänzen bzw. ersetzen alte; None löscht eines (der Agent gilt
+    dann als nicht erledigt, z. B. nach abgelehnter Freigabe). Ausgabe: zusammengeführtes dict."""
+    return {k: v for k, v in {**alt, **neu}.items() if v is not None}
 
 
 class AnalyseZustand(TypedDict):
@@ -24,6 +25,13 @@ class AnalyseZustand(TypedDict):
     # je Agent: {"text", "werkzeuge": [{name, argumente, ergebnis}], "markierungen": [unbelegte Zahlen]}
     ergebnisse: Annotated[dict[str, dict], _zusammenfuehren]
     entscheidungen: Annotated[list[dict], operator.add]  # jede Supervisor-Entscheidung mit Begründung
-    offene_rueckfragen: Annotated[list[str], operator.add]
+    rueckfragen: Annotated[list[str], operator.add]  # Fragen des Supervisors an den Nutzer
+    antworten: Annotated[list[str], operator.add]  # Antworten des Nutzers, gleiche Reihenfolge
     kosten: Annotated[list[dict], operator.add]  # je Modellaufruf: agent, modell, Token, eur (Wert)
+    vorschlag: dict | None  # letzte Herleitung (regel_eg) des Mietansatz-Agenten samt Begründung, wartet auf Freigabe
+    # Entscheidung des Nutzers {aktion, aenderungen, kommentar, herleitung}; herleitung ist der gültige Mietansatz
+    # (None nach Ablehnen). Ein kritischer Prüfbefund setzt das ganze Feld zurück auf None.
+    freigabe: dict | None
+    pruefungen: Annotated[list[list[dict]], operator.add]  # Befunde je Prüfrunde; die Länge zählt die Runden
+    bericht: dict | None  # gefüllter Bericht {abschnitte, fussnoten, markierungen, befunde, herleitung}
     abbruch: str | None  # gesetzt, wenn der Lauf vorzeitig endet (z. B. Budget)

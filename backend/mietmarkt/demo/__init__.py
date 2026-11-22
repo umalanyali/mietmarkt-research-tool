@@ -6,7 +6,7 @@ import yaml
 from sqlalchemy import Engine
 from sqlmodel import Session, SQLModel
 
-from ..modelle import Comp, Marktkennzahl, Projekt, Quelle
+from ..modelle import Comp, Marktkennzahl, Projekt, Quelle, Wohnung
 
 DATEI = Path(__file__).with_name("musterstadt.yaml")
 
@@ -27,10 +27,14 @@ def seed(e: Engine) -> int:
     daten = yaml.safe_load(DATEI.read_text(encoding="utf-8"))
     with Session(e) as s:
         for p in daten["projekte"]:
-            projekt = Projekt(**{k: v for k, v in p.items() if k not in ("quellen", "comps", "kennzahlen", "stichtag", "analysiert_am")},
-                              stichtag=_datum(p["stichtag"]), analysiert_am=_datum(p["analysiert_am"]), demo=True)
+            daten_felder = ("stichtag", "analysiert_am", "vermarktungsstart")
+            projekt = Projekt(**{k: v for k, v in p.items() if k not in ("quellen", "comps", "kennzahlen", "wohnungsmix",
+                                                                         *daten_felder)},
+                              **{k: _datum(p[k]) for k in daten_felder if p.get(k)}, demo=True)
             s.add(projekt)
-            s.flush()  # vergibt die Projekt-ID, die Quellen, Comps und Kennzahlen brauchen
+            s.flush()  # vergibt die Projekt-ID, die Quellen, Comps, Kennzahlen und Wohnungen brauchen
+            for w in p.get("wohnungsmix", []):
+                s.add(Wohnung(projekt_id=projekt.id, **w))
             quelle_id = {}
             for q in p.get("quellen", []):
                 quelle = Quelle(projekt_id=projekt.id, **{**q, "abgerufen_am": _datum(q["abgerufen_am"])})

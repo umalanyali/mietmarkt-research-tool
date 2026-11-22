@@ -1,5 +1,6 @@
 """Übersetzt den LangGraph-Strom (graph.astream mit stream_mode ["updates", "messages"]) in einfache Ereignisse
-für die Oberfläche: Agent gestartet, Werkzeugaufruf, Werkzeugergebnis, Text, Agent fertig, Kosten, Rückfrage, Abbruch."""
+für die Oberfläche: Agent gestartet, Werkzeugaufruf, Werkzeugergebnis, Text, Agent fertig, Kosten, Rückfrage,
+wartet auf Freigabe bzw. Antwort, Freigabe, Antwort, Prüfung, Bericht, Abbruch."""
 from langchain_core.messages import AIMessage
 
 from .graph import AGENTEN, lesen
@@ -19,12 +20,16 @@ def ereignisse(modus: str, daten: object) -> list[dict]:
             if agent in AGENTEN and isinstance(stueck, AIMessage) and stueck.text else []
     aus = []
     for knoten, update in daten.items():
+        if knoten == "__interrupt__":  # der Graph hält an; update ist ein Tupel von Interrupt-Objekten
+            aus += [{"typ": "wartet_auf_freigabe" if i.value["art"] == "mietansatz" else "wartet_auf_antwort", **i.value}
+                    for i in update]
+            continue
         update = update or {}
         if knoten == "supervisor":
             aus += [{"typ": "agent_gestartet", "agent": d["naechster"], "auftrag": d["auftrag"],
                      "begruendung": d["begruendung"], "markierungen": d["markierungen"]}
                     for d in update.get("entscheidungen", []) if d["naechster"] != "fertig"]
-            aus += [{"typ": "rueckfrage", "text": r} for r in update.get("offene_rueckfragen", [])]
+            aus += [{"typ": "rueckfrage", "text": r} for r in update.get("rueckfragen", [])]
         elif knoten in AGENTEN:
             aus += [{"typ": "werkzeugaufruf", "agent": knoten, "werkzeug": a["name"], "argumente": a["args"]}
                     for n in update.get("nachrichten", []) for a in getattr(n, "tool_calls", [])]
@@ -34,6 +39,19 @@ def ereignisse(modus: str, daten: object) -> list[dict]:
         elif knoten == "validierung":
             aus += [{"typ": "agent_fertig", "agent": a, "text": r["text"], "markierungen": r["markierungen"]}
                     for a, r in update["ergebnisse"].items()]
+        elif knoten == "rueckfrage":
+            aus.append({"typ": "antwort", "antwort": update["antworten"][-1]})
+        elif knoten == "freigabe":
+            aus.append({"typ": "freigabe", **update["freigabe"]})
+        elif knoten == "pruefung" and "pruefungen" in update:
+            aus += [{"typ": "werkzeugergebnis", "agent": "pruefung", "werkzeug": w["name"], "ergebnis": w["ergebnis"]}
+                    for w in update["ergebnisse"]["pruefung"]["werkzeuge"]]
+            # „freigabe“ im Update heißt: sie wurde verworfen, der Lauf geht zum Supervisor zurück
+            aus.append({"typ": "pruefung", "befunde": update["pruefungen"][-1], "zurueck": "freigabe" in update})
+        elif knoten in ("bericht", "bericht_korrektur") and update.get("bericht"):
+            # Mit Entwurf ist der Bericht vorläufig: die Korrekturrunde folgt und schickt ihn erneut
+            aus.append({"typ": "bericht", "vorlaeufig": "entwurf" in update["bericht"],
+                        **{k: v for k, v in update["bericht"].items() if k != "entwurf"}})
         aus += [{"typ": "kosten", **k} for k in update.get("kosten", [])]
         if update.get("abbruch"):
             aus.append({"typ": "abbruch", "grund": update["abbruch"]})

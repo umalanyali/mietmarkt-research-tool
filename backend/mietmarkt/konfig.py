@@ -21,6 +21,9 @@ class Konfig(BaseSettings):
     # Importierte Portal-Daten (RIWIS, VALUE, Portal-Exporte) gehen nur mit ausdrücklicher Freigabe an Anthropic,
     # denn ihre Lizenz erlaubt die Weitergabe an Dritte oft nicht. Demo-Daten und selbst erfasste Werte immer.
     ki_portaldaten_senden: bool = False
+    # Mietwachstum g p. a. für die Fortschreibung des Mietansatzes bis zum Vermarktungsstart, wenn das Projekt
+    # keinen eigenen Wert hat (0.02 = 2 %)
+    mietwachstum_pa: float = 0.02
 
     @property
     def ki_konfiguriert(self) -> bool:

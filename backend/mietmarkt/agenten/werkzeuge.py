@@ -6,6 +6,7 @@ from typing import Annotated, Literal
 
 from langchain_core.tools import BaseTool, tool
 from langgraph.prebuilt import InjectedState
+from pydantic import Field
 from sqlalchemy import Engine
 from sqlmodel import Session, select
 
@@ -14,12 +15,14 @@ from ..geo import dienste
 from ..geo.umfeld import umfeld as geo_umfeld
 from ..kennzahlen import comps_kennzahlen, eur_qm
 from ..konfig import Konfig
-from ..mietansatz import BASIS_TEXT, Anpassung, Basis, fachregeln_pruefen, herleiten
-from ..modelle import Comp, Herkunft, Marktkennzahl, Projekt
+from ..mietansatz import BASIS_TEXT, Anpassung, Basis, fachregeln_pruefen, herleiten, mit_fortschreibung
+from ..modelle import Comp, Herkunft, Marktkennzahl, Projekt, Wert
+from ..plausibilitaet import abgleich, alter, anzahl, ausreisser_iqr
 
 # InjectedState: LangGraph setzt die Projekt-ID aus dem Zustand ein. Das Modell sieht den Parameter nicht und
 # kann so kein fremdes Projekt abfragen.
 ProjektId = Annotated[int, InjectedState("projekt_id")]
+MAX_ANPASSUNGEN = 10  # je Herleitung; begrenzt Kette und Prompt-Größe (S2)
 
 
 def _json(daten: object) -> str:
@@ -29,6 +32,12 @@ def _json(daten: object) -> str:
 
 HINWEIS_PORTALDATEN = ("Importierte Portal-Daten wurden nicht an das Modell gegeben (Lizenzschutz). Freigabe: "
                        "KI_PORTALDATEN_SENDEN=true in .env. Sage dem Nutzer, dass das Ergebnis ohne sie entstanden ist.")
+
+
+def fortschreibung(p: Projekt, k: Konfig) -> tuple:
+    """Daten der Fortschreibung. Eingabe: Projekt, Konfig. Ausgabe: (Stichtag, Vermarktungsstart, g); g aus dem
+    Projekt, sonst MIETWACHSTUM_PA aus .env."""
+    return p.stichtag, p.vermarktungsstart, k.mietwachstum_pa if p.mietwachstum_pa is None else p.mietwachstum_pa
 
 
 def werkzeuge(e: Engine, k: Konfig) -> dict[str, list[BaseTool]]:
@@ -102,12 +111,15 @@ def werkzeuge(e: Engine, k: Konfig) -> dict[str, list[BaseTool]]:
             werte = {name: w.model_dump() for name, w in comps_kennzahlen(comps, p.stichtag).items()}
             return _json(mit_hinweis({"comps": werte, "marktkennzahlen": [
                 {"bezeichnung": m.bezeichnung, "kategorie": m.kategorie, "gebiet": m.gebiet, "wert": m.wert,
-                 "einheit": m.einheit, "herkunft": m.herkunft, "quelle_id": m.quelle_id} for m in markt]},
+                 "einheit": m.einheit, "stellen": m.stellen, "herkunft": m.herkunft, "quelle_id": m.quelle_id}
+                for m in markt]},
                 comps=comps_ohne, marktkennzahlen=markt_ohne))
 
     @tool
-    def mietansatz_herleiten(projekt_id: ProjektId, basis: Basis, anpassungen: list[Anpassung]) -> str:
-        """Rechnet einen Mietansatz in €/m²: Basis aus den Comps plus Zu- (+) und Abschläge (−), die Python addiert.
+    def mietansatz_herleiten(projekt_id: ProjektId, basis: Basis,
+                             anpassungen: Annotated[list[Anpassung], Field(max_length=MAX_ANPASSUNGEN)]) -> str:
+        """Rechnet einen Mietansatz in €/m²: Basis aus den Comps plus Zu- (+) und Abschläge (−), die Python addiert,
+        und schreibt ihn bis zum Vermarktungsstart fort (× (1 + g)^(Monate/12), g und Start aus den Projektdaten).
         basis regel_eg = Haupt-Mietansatz (Ø flächengewichtet Regelgeschoss/EG). basis dg = eigene DG-Herleitung
         (Ø flächengewichtet DG-Comps); DG ist nie ein Zuschlag auf regel_eg. Jede Anpassung braucht einen belegten
         Unterschied zwischen Projekt und Comps und nennt ihn in der Begründung; ohne belegten Unterschied kein Merkmal.
@@ -118,8 +130,36 @@ def werkzeuge(e: Engine, k: Konfig) -> dict[str, list[BaseTool]]:
             comps, ohne = freigegeben(p, im_umkreis(s, p))
         roh = comps_kennzahlen(comps, p.stichtag)[basis]
         basiswert = roh.model_copy(update={"rechenweg_text": f"{BASIS_TEXT[basis]}: {roh.rechenweg_text}"})
-        herleitung = herleiten(basiswert, [Anpassung.model_validate(a) for a in anpassungen], Herkunft.KI)
+        herleitung = mit_fortschreibung(herleiten(basiswert, [Anpassung.model_validate(a) for a in anpassungen],
+                                                  Herkunft.KI), *fortschreibung(p, k))
         return _json(mit_hinweis({"basis": basis, **herleitung.model_dump()}, comps=ohne))
 
+    @tool
+    def comps_pruefen(projekt_id: ProjektId) -> str:
+        """Prüft die Comps im Umkreis: Anzahl (mindestens 5), Alter (höchstens 12 Monate vor dem Stichtag online)
+        und Ausreißer (€/m² außerhalb Q1 − 1,5 × IQR bis Q3 + 1,5 × IQR). Je Prüfung „auffaellig“ und Werte."""
+        with Session(e) as s:
+            p = s.get(Projekt, projekt_id)
+            comps, ohne = freigegeben(p, im_umkreis(s, p))
+        return _json(mit_hinweis({"anzahl": anzahl(comps), "alter": alter(comps, p.stichtag),
+                                  "ausreisser": ausreisser_iqr(comps)}, comps=ohne))
+
+    @tool
+    def ansatz_pruefen(projekt_id: ProjektId, ansatz_eur_qm: float | None) -> str:
+        """Vergleicht den freigegebenen Mietansatz mit dem Median der Comps, dem Ø Regelgeschoss/EG und den
+        VALUE-Kennzahlen in €/m²; auffällig ab mehr als 15 % Abweichung."""
+        with Session(e) as s:
+            p = s.get(Projekt, projekt_id)
+            comps, comps_ohne = freigegeben(p, im_umkreis(s, p))
+            markt, markt_ohne = freigegeben(p, list(s.exec(select(Marktkennzahl).where(
+                Marktkennzahl.projekt_id == p.id, Marktkennzahl.gruppe == "value", Marktkennzahl.einheit == "€/m²"))))
+        # Nur zusammenfassende Kennzahlen: Zeitreihen, Min/Max und Quantile liegen erwartbar weit vom Ansatz entfernt
+        k = comps_kennzahlen(comps, p.stichtag)
+        vergleich = {"Median Comps": k["median"], "Ø flächengewichtet Regelgeschoss/EG": k["regel_eg"]} | {
+            f"{m.bezeichnung} ({m.gebiet})": Wert(wert=m.wert, einheit=m.einheit, herkunft=m.herkunft, quelle_id=m.quelle_id)
+            for m in markt}
+        ansatz = Wert(wert=ansatz_eur_qm, einheit="€/m²", herkunft=Herkunft.BERECHNET, rechenweg_text="freigegebener Mietansatz")
+        return _json(mit_hinweis(abgleich(ansatz, vergleich), comps=comps_ohne, marktkennzahlen=markt_ohne))
+
     return {"standort": [lage, umfeld], "marktdaten": [comps_filtern, kennzahlen],
-            "mietansatz": [kennzahlen, mietansatz_herleiten]}
+            "mietansatz": [kennzahlen, mietansatz_herleiten], "pruefung": [comps_pruefen, ansatz_pruefen]}

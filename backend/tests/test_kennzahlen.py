@@ -92,3 +92,15 @@ def test_preisklasse_ohne_wert_wird_als_fehlend_ausgewiesen():
 
     a = preisklassen_auswertung([("< 12", 4), ("12–13,50", None), ("13,50–15", 6)])
     assert a.summe.wert == 10 and "12–13,50 fehlt" in a.summe.rechenweg_text
+
+
+def test_wohnungsmix_je_geschosslage():
+    """Anzahl und Wohnfläche je Geschosslage aus dem Wohnungsmix, mit Rechenweg."""
+    from mietmarkt.kennzahlen import wohnungsmix
+    from mietmarkt.modelle import Wohnung
+    mix = wohnungsmix([Wohnung(projekt_id=1, typ="Regel", zimmer=2, wohnflaeche=60, anzahl=8),
+                       Wohnung(projekt_id=1, typ="DG", zimmer=3, wohnflaeche=85, anzahl=2),
+                       Wohnung(projekt_id=1, typ="DG", zimmer=4, wohnflaeche=100, anzahl=1)])
+    assert mix["dg_anzahl"].wert == 3 and mix["dg_wohnflaeche"].wert == 270
+    assert mix["regel_eg_anzahl"].wert == 8 and mix["gesamt_anzahl"].wert == 11
+    assert "2 × 85,0 m² + 1 × 100,0 m²" in mix["dg_wohnflaeche"].rechenweg_text

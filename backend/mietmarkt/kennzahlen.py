@@ -6,7 +6,7 @@ import statistics
 from pydantic import BaseModel
 
 from .format import de
-from .modelle import Comp, Herkunft, Wert
+from .modelle import Comp, Herkunft, Wert, Wohnung
 
 MIN_TAGE_ANFRAGEN = 7  # darunter ist „Anfragen je Monat“ nicht belastbar
 
@@ -149,3 +149,23 @@ def preisklassen_auswertung(klassen: list[tuple[str, float | None]]) -> Preiskla
         staerkste=klasse,
         anteil=_berechnet(n / summe * 100, "%", f"{de(n, 0)} / {de(summe, 0)} = {de(n / summe * 100, 1)} % in Klasse {klasse}"),
     )
+
+
+def wohnungsmix(wohnungen: list[Wohnung]) -> dict[str, Wert]:
+    """Anzahl und Wohnfläche des Projekts je Geschosslage (Regelgeschoss/EG gemeinsam, DG getrennt – wie die Basen
+    des Mietansatzes).
+
+    Eingabe: Wohnungen des Projekts. Ausgabe: regel_eg_anzahl, regel_eg_wohnflaeche, dg_anzahl, dg_wohnflaeche,
+    gesamt_anzahl, je als Wert mit Rechenweg.
+    """
+    aus = {}
+    for name, typen in (("regel_eg", ("Regel", "EG")), ("dg", ("DG",))):
+        teil = [w for w in wohnungen if w.typ in typen]
+        n = sum(w.anzahl for w in teil)
+        flaeche = sum(w.anzahl * w.wohnflaeche for w in teil)
+        glieder = " + ".join(f"{w.anzahl} × {de(w.wohnflaeche, 1)} m²" for w in teil) or "keine Wohnungen"
+        aus[f"{name}_anzahl"] = _berechnet(n, "Wohnungen", f"Σ Anzahl {name.replace('_', '/')} laut Wohnungsmix: {n}")
+        aus[f"{name}_wohnflaeche"] = _berechnet(flaeche, "m²", f"{glieder} = {de(flaeche, 1)} m²")
+    gesamt = sum(w.anzahl for w in wohnungen)
+    aus["gesamt_anzahl"] = _berechnet(gesamt, "Wohnungen", f"Σ Anzahl laut Wohnungsmix: {gesamt}")
+    return aus

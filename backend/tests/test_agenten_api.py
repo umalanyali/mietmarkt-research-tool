@@ -3,13 +3,14 @@ import json
 
 import pytest
 from fastapi.testclient import TestClient
-from ki_fakes import entscheidung, ki, modelle
-from sqlmodel import Session
+from ki_fakes import befunde, bericht, entscheidung, ki, modelle
+from sqlmodel import Session, select
 
 from api import main
 from mietmarkt.db import engine
 from mietmarkt.demo import seed
 from mietmarkt.konfig import Konfig
+from mietmarkt.modelle import Wohnung
 
 
 @pytest.fixture
@@ -26,7 +27,8 @@ def client(tmp_path):
     main.app.dependency_overrides.update({
         main.sitzung: test_sitzung,
         main.konfig: lambda: Konfig(_env_file=None, anthropic_api_key="test"),
-        main.ki_modelle: lambda: modelle(stark=[entscheidung("marktdaten"), entscheidung("fertig", rueckfrage="Weiter?")],
+        # Kurzer Lauf bis zum Ende: Marktdaten, dann eine unlesbare Supervisor-Antwort (Abbruch)
+        main.ki_modelle: lambda: modelle(stark=[entscheidung("marktdaten"), ki("Ich weiß nicht weiter.")],
                                          schnell=[ki(werkzeuge=(("kennzahlen", {}),)), ki("12 Comps im Umkreis.")]),
         main.checkpoint_pfad: lambda: tmp_path / "checkpoints.db",
     })
@@ -52,7 +54,7 @@ def test_lauf_starten_und_ereignisse_streamen(client):
     assert typen[-1] == "fertig"
     assert typen.index("agent_gestartet") < typen.index("werkzeugaufruf") < typen.index("agent_fertig")
     ende = ereignisse(strom)[-1]
-    assert ende["status"] == "fertig" and ende["kosten_eur"] > 0
+    assert ende["status"] == "abgebrochen" and ende["kosten_eur"] > 0  # Skript endet mit unlesbarer Antwort
 
 
 def test_beendeter_lauf_liefert_nur_das_ergebnis(client):
@@ -142,3 +144,123 @@ def test_text_wird_in_stuecken_gestreamt(client):
     alle = ereignisse(client.get(f"/api/laeufe/{lauf_id}/ereignisse"))
     stuecke = [e["text"] for e in alle if e["typ"] == "text" and e["agent"] == "marktdaten"]
     assert len(stuecke) > 1 and "".join(stuecke) == "12 Comps im Umkreis."
+
+
+@pytest.fixture
+def mit_freigabe(client):
+    """Ein Skript bis zum Bericht; dieselben Fake-Modelle für alle Anfragen (das Skript läuft über mehrere Abrufe).
+    Ausgabe: Modelle."""
+    m = modelle(stark=[entscheidung("standort"), entscheidung("marktdaten"), entscheidung("mietansatz"), ki(werkzeuge=(
+        ("mietansatz_herleiten", {"basis": "regel_eg", "anpassungen": []}),
+        ("mietansatz_herleiten", {"basis": "dg", "anpassungen": []}))), ki("Basis ohne Zu- und Abschläge."),
+        befunde("hinweis"), bericht()],
+        schnell=[ki("Standort."), ki(werkzeuge=(("kennzahlen", {}),)), ki("12 Comps im Umkreis.")])
+    main.app.dependency_overrides[main.ki_modelle] = lambda: m
+    return m
+
+
+def test_lauf_wartet_auf_freigabe_und_setzt_fort(client, mit_freigabe):
+    """Der Strom endet mit „wartet_auf_freigabe“ samt Vorschlag; ein erneuter Abruf zeigt ihn wieder, ohne Modell-
+    aufruf. POST /freigabe setzt fort: Freigabe, Prüfung, Bericht, zum Schluss „fertig“ mit Bericht."""
+    lauf_id = client.post("/api/projekte/1/laeufe").json()["lauf_id"]
+    erst = ereignisse(client.get(f"/api/laeufe/{lauf_id}/ereignisse"))
+    assert erst[-1]["typ"] == "wartet_auf_freigabe"
+    assert erst[-1]["vorschlag"]["herleitungen"]["regel_eg"]["schritte"][0]["art"] == "basis"
+    aufrufe = mit_freigabe.stark.i
+    assert ereignisse(client.get(f"/api/laeufe/{lauf_id}/ereignisse"))[-1]["typ"] == "wartet_auf_freigabe"
+    assert mit_freigabe.stark.i == aufrufe
+    weiter = ereignisse(client.post(f"/api/laeufe/{lauf_id}/freigabe", json={"aktion": "annehmen"}))
+    typen = [e["typ"] for e in weiter]
+    assert typen.index("freigabe") < typen.index("pruefung") < typen.index("bericht") < typen.index("fertig")
+    assert weiter[-1]["status"] == "fertig" and weiter[-1]["bericht"]["fussnoten"]
+    assert [b["schweregrad"] for b in weiter[typen.index("pruefung")]["befunde"]] == ["hinweis"]
+
+
+def test_bericht_export_markdown_und_pptx(client, mit_freigabe):
+    """Nach dem Lauf liegt der Bericht als Markdown und PowerPoint zum Herunterladen bereit; vorher 404."""
+    lauf_id = client.post("/api/projekte/1/laeufe").json()["lauf_id"]
+    client.get(f"/api/laeufe/{lauf_id}/ereignisse")
+    assert client.get(f"/api/laeufe/{lauf_id}/bericht.md").status_code == 404
+    client.post(f"/api/laeufe/{lauf_id}/freigabe", json={"aktion": "annehmen"})
+    md = client.get(f"/api/laeufe/{lauf_id}/bericht.md")
+    assert md.status_code == 200 and md.text.startswith("# Mietmarktbericht: ") and "attachment" in md.headers["content-disposition"]
+    folien = client.get(f"/api/laeufe/{lauf_id}/bericht.pptx")
+    assert folien.status_code == 200 and folien.content[:2] == b"PK"  # .pptx ist ein ZIP-Archiv
+    assert "presentationml" in folien.headers["content-type"]
+
+
+def test_freigabe_nur_wenn_der_lauf_wartet(client, mit_freigabe):
+    """Unbekannter Lauf 404; nicht gestartet oder schon fertig 409; unvollständige Freigabe 422 (Lauf wartet weiter)."""
+    assert client.post("/api/laeufe/gibt-es-nicht/freigabe", json={"aktion": "annehmen"}).status_code == 404
+    lauf_id = client.post("/api/projekte/1/laeufe").json()["lauf_id"]
+    assert client.post(f"/api/laeufe/{lauf_id}/freigabe", json={"aktion": "annehmen"}).status_code == 409
+    client.get(f"/api/laeufe/{lauf_id}/ereignisse")
+    assert client.post(f"/api/laeufe/{lauf_id}/freigabe", json={"aktion": "ablehnen"}).status_code == 422
+    # Basis, die im Vorschlag nicht vorkommt (hier: unbekannter Schlüssel) → 422, der Lauf wartet weiter
+    assert client.post(f"/api/laeufe/{lauf_id}/freigabe", json={"aktion": "aendern", "aenderungen": {
+        "og": {"basiswert": 16}}}).status_code == 422
+    assert client.post(f"/api/laeufe/{lauf_id}/freigabe", json={"aktion": "annehmen"}).status_code == 200
+    assert client.post(f"/api/laeufe/{lauf_id}/freigabe", json={"aktion": "annehmen"}).status_code == 409
+
+
+def test_rueckfrage_beantworten(client):
+    """Bei einer Rückfrage endet der Strom mit „wartet_auf_antwort“. POST /antwort setzt fort (Ereignis „antwort“);
+    eine Freigabe passt dann nicht (409), eine leere Antwort ist ungültig (422)."""
+    m = modelle(stark=[entscheidung("fertig", rueckfrage="Welches Baujahr?"), ki("unlesbar")], schnell=[])
+    main.app.dependency_overrides[main.ki_modelle] = lambda: m
+    lauf_id = client.post("/api/projekte/1/laeufe").json()["lauf_id"]
+    alle = ereignisse(client.get(f"/api/laeufe/{lauf_id}/ereignisse"))
+    assert {"typ": "rueckfrage", "text": "Welches Baujahr?"} in alle
+    assert alle[-1] == {"typ": "wartet_auf_antwort", "art": "rueckfrage", "frage": "Welches Baujahr?"}
+    assert client.post(f"/api/laeufe/{lauf_id}/freigabe", json={"aktion": "annehmen"}).status_code == 409
+    assert client.post(f"/api/laeufe/{lauf_id}/antwort", json={"antwort": ""}).status_code == 422
+    weiter = ereignisse(client.post(f"/api/laeufe/{lauf_id}/antwort", json={"antwort": "Baujahr 2027"}))
+    assert {"typ": "antwort", "antwort": "Baujahr 2027"} in weiter
+    assert weiter[-1]["typ"] == "fertig"
+    assert client.post(f"/api/laeufe/{lauf_id}/antwort", json={"antwort": "nochmal"}).status_code == 409
+
+
+def test_aenderung_fuer_basis_ohne_herleitung(client):
+    """Ein Projekt ohne DG-Wohnungen hat nur den Haupt-Ansatz: eine Änderung für dg wird mit 422 abgelehnt."""
+    s = next(main.app.dependency_overrides[main.sitzung]())  # Sitzung auf die Testdatenbank des Fixtures
+    for w in s.exec(select(Wohnung).where(Wohnung.typ == "DG")):
+        s.delete(w)
+    s.commit()
+    m = modelle(stark=[entscheidung("standort"), entscheidung("marktdaten"), entscheidung("mietansatz"), ki(werkzeuge=(
+        ("mietansatz_herleiten", {"basis": "regel_eg", "anpassungen": []}),)), ki("Nur Haupt-Ansatz.")],
+        schnell=[ki("Standort."), ki("12 Comps.")])
+    main.app.dependency_overrides[main.ki_modelle] = lambda: m
+    lauf_id = client.post("/api/projekte/1/laeufe").json()["lauf_id"]
+    assert ereignisse(client.get(f"/api/laeufe/{lauf_id}/ereignisse"))[-1]["typ"] == "wartet_auf_freigabe"
+    antwort = client.post(f"/api/laeufe/{lauf_id}/freigabe", json={"aktion": "aendern",
+                                                                   "aenderungen": {"dg": {"basiswert": 19}}})
+    assert antwort.status_code == 422 and "dg" in antwort.json()["detail"]
+
+
+def test_export_ohne_projekt_ist_404(client, mit_freigabe):
+    """P16: Wurde das Projekt gelöscht, liefert der Export 404 statt eines Absturzes."""
+    from mietmarkt.modelle import Projekt
+    lauf_id = client.post("/api/projekte/1/laeufe").json()["lauf_id"]
+    client.get(f"/api/laeufe/{lauf_id}/ereignisse")
+    client.post(f"/api/laeufe/{lauf_id}/freigabe", json={"aktion": "annehmen"})
+    s = next(main.app.dependency_overrides[main.sitzung]())
+    s.delete(s.get(Projekt, 1))
+    s.commit()
+    assert client.get(f"/api/laeufe/{lauf_id}/bericht.md").status_code == 404
+
+
+def test_lauf_wird_auch_ohne_gestarteten_strom_freigegeben(client, tmp_path):
+    """S1: Bricht der Browser ab, bevor der Strom beginnt, läuft der Generator nie. Die Freigabe des Laufs hängt
+    deshalb an einer Hintergrundaufgabe der Antwort, die Starlette auch dann ausführt."""
+    import asyncio
+
+    from mietmarkt.modelle import Lauf
+    s = next(main.app.dependency_overrides[main.sitzung]())
+    lauf = Lauf(id="s1", projekt_id=1, gestartet_am=__import__("datetime").datetime.now(__import__("datetime").UTC))
+    s.add(lauf)
+    s.commit()
+    antwort = main._ausfuehren(lauf, s.get_bind(), Konfig(_env_file=None, anthropic_api_key="test"),
+                               modelle(stark=[], schnell=[]), tmp_path / "cp.db", None)
+    assert "s1" in main.aktive_laeufe
+    asyncio.run(antwort.background())
+    assert "s1" not in main.aktive_laeufe

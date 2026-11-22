@@ -6,7 +6,7 @@ from langchain_core.language_models.fake_chat_models import FakeMessagesListChat
 from langchain_core.messages import AIMessage, AIMessageChunk
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from langchain_core.runnables import RunnableLambda
-from pydantic import ValidationError
+from pydantic import Field, ValidationError
 
 from mietmarkt.agenten.modelle import Modelle
 
@@ -20,6 +20,7 @@ class FakeModell(FakeMessagesListChatModel):
     """
 
     fehler: bool = False  # True: jeder Aufruf scheitert (simuliert einen Absturz mitten im Lauf)
+    aufrufe: list = Field(default_factory=list)  # Eingaben je Aufruf (Nachrichtenlisten), für Prüfungen im Test
 
     def bind_tools(self, tools, **kwargs):
         """Werkzeuge werden ignoriert; die Antworten enthalten die Werkzeugaufrufe schon. Ausgabe: das Modell selbst."""
@@ -34,8 +35,9 @@ class FakeModell(FakeMessagesListChatModel):
         self.i += 1
         return self.responses[self.i - 1]
 
-    def _generate(self, *args, **kwargs):
+    def _generate(self, messages, *args, **kwargs):
         """Antwort am Stück (ohne Streaming). Ausgabe: ChatResult."""
+        self.aufrufe.append(messages)
         return ChatResult(generations=[ChatGeneration(message=self._naechste())])
 
     def _stream(self, messages, stop=None, run_manager=None, **kwargs):
@@ -43,6 +45,7 @@ class FakeModell(FakeMessagesListChatModel):
 
         Text Wort für Wort; Werkzeugaufrufe und Tokenverbrauch hängen am letzten Stück. Ausgabe: Stücke.
         """
+        self.aufrufe.append(messages)
         antwort = self._naechste()
         woerter = re.findall(r"\S+\s*", antwort.text) or [""]
         for i, wort in enumerate(woerter):
@@ -80,6 +83,24 @@ def entscheidung(naechster: str, auftrag: str = "Bitte bearbeiten.", rueckfrage:
     """Antwort des Supervisors als JSON (strukturierte Ausgabe). Ausgabe: AIMessage."""
     return ki(json.dumps({"naechster": naechster, "auftrag": auftrag, "begruendung": begruendung or f"als Nächstes {naechster}",
                           "rueckfrage": rueckfrage}), eingabe=eingabe, ausgabe=ausgabe)
+
+
+def befunde(*schweregrade: str) -> AIMessage:
+    """Antwort des Prüf-Agenten (strukturierte Ausgabe) mit je einem Befund je Schweregrad. Ausgabe: AIMessage."""
+    return ki(json.dumps({"befunde": [{"pruefung": "abgleich", "schweregrad": g, "text": f"Befund {g}."}
+                                      for g in schweregrade]}))
+
+
+def bericht(**abschnitte: str | list[dict]) -> AIMessage:
+    """Antwort des Bericht-Agenten (strukturierte Ausgabe): je Abschnitt Sätze mit Belegen. Ein Text wird ein Satz
+    mit Beleg „projekt“ (unter Risiken „befund:1“); fehlende Abschnitte bekommen Standardtext. Ausgabe: AIMessage."""
+    texte = {"lage": "Ruhige Lage am Lindenplatz.", "markt": "Median {{wert:kennzahlen.comps.median}}.",
+             "mietansatz": "Ansatz {{wert:mietansatz.regel_eg.ergebnis}}.", "risiken": "Keine kritischen Befunde."}
+    texte |= abschnitte
+    # Unter Risiken zählt nur ein Befund als Beleg; die Test-Skripte haben stets mindestens einen
+    return ki(json.dumps({k: v if isinstance(v, list) else [{"text": v, "belege": ["befund:1" if k == "risiken"
+                                                                                 else "projekt"]}]
+                          for k, v in texte.items()}))
 
 
 def modelle(stark: list[AIMessage], schnell: list[AIMessage], *, schnell_fehler: bool = False) -> Modelle:

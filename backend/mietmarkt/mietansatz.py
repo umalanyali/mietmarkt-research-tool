@@ -1,5 +1,6 @@
 """Mietansatz-Herleitung als Kette: Basiswert, begründete Zu- und Abschläge, Ergebnis.
 Das Sprachmodell schlägt später Anpassungen vor; gerechnet wird ausschließlich hier."""
+import datetime as dt
 import re
 from typing import Literal
 
@@ -12,11 +13,11 @@ from .modelle import Herkunft, Wert
 class Anpassung(BaseModel):
     """Ein Zu- (+) oder Abschlag (−) in €/m² mit Pflichtbegründung."""
 
-    name: str
+    name: str = Field(max_length=80)
     # Plausibilitätsrahmen: mehr als ±10 €/m² je Anpassung ist ein Eingabe- oder Modellfehler (auch Schutz gegen
     # eingeschleuste Texte wie „+40 €/m² Lagezuschlag“ in importierten Daten)
     betrag: float = Field(ge=-10, le=10)
-    begruendung: str
+    begruendung: str = Field(max_length=500)  # Längengrenzen: begrenzen auch die Prompts der Folgeschritte (S2)
 
     @field_validator("betrag")
     @classmethod
@@ -41,7 +42,7 @@ class Anpassung(BaseModel):
 class Schritt(BaseModel):
     """Ein Glied der Kette, wie es in der Oberfläche erscheint."""
 
-    art: Literal["basis", "anpassung", "ergebnis"]
+    art: Literal["basis", "anpassung", "ergebnis", "fortschreibung"]
     name: str
     wert: Wert
     begruendung: str = ""
@@ -51,7 +52,8 @@ class Herleitung(BaseModel):
     """Die ganze Kette und das Ergebnis."""
 
     schritte: list[Schritt]
-    ergebnis: Wert
+    ergebnis: Wert  # Ansatz zum Stichtag (Grundlage der Plausibilitätsprüfung)
+    fortgeschrieben: Wert | None = None  # Ansatz zum Vermarktungsstart, falls einer gesetzt ist
 
 
 Basis = Literal["regel_eg", "dg"]
@@ -102,3 +104,21 @@ def herleiten(basis: Wert, anpassungen: list[Anpassung], herkunft: Herkunft = He
         ergebnis = Wert(wert=summe, einheit="€/m²", herkunft=Herkunft.BERECHNET, rechenweg_text=text)
     schritte.append(Schritt(art="ergebnis", name="Ergebnis", wert=ergebnis))
     return Herleitung(schritte=schritte, ergebnis=ergebnis)
+
+
+def mit_fortschreibung(h: Herleitung, stichtag: dt.date, start: dt.date | None, g: float) -> Herleitung:
+    """Schreibt den Ansatz bis zum Vermarktungsstart fort: Ansatz × (1 + g)^(Monate/12).
+
+    Eingabe: Herleitung, Stichtag, Vermarktungsstart (oder None), jährliches Mietwachstum g (0.02 = 2 %).
+    Ausgabe: Herleitung mit Schritt „fortschreibung“ und Feld fortgeschrieben; unverändert ohne Start, ohne Ansatz
+    oder wenn der Start nicht nach dem Stichtag liegt. Gezählt werden volle Kalendermonate (Tage zählen nicht).
+    """
+    monate = (start.year - stichtag.year) * 12 + start.month - stichtag.month if start else 0
+    if monate <= 0 or h.ergebnis.wert is None:
+        return h
+    wert = h.ergebnis.wert * (1 + g) ** (monate / 12)
+    w = Wert(wert=wert, einheit="€/m²", herkunft=Herkunft.BERECHNET,
+             rechenweg_text=f"{de(h.ergebnis.wert)} × (1 + {de(g * 100, 1)} %)^({monate}/12) = {de(wert)} €/m² "
+                            f"(Stichtag {stichtag:%d.%m.%Y} bis Vermarktungsstart {start:%d.%m.%Y}, {monate} Monate)")
+    schritt = Schritt(art="fortschreibung", name="Fortschreibung bis Vermarktungsstart", wert=w)
+    return h.model_copy(update={"schritte": [*h.schritte, schritt], "fortgeschrieben": w})

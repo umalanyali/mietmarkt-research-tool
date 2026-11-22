@@ -42,6 +42,8 @@ class ProjektBasis(SQLModel):
     segment: str = "Wohnen · Neubau"
     umkreis_km: float = 2.0
     vermarktung: str = "Miete"
+    vermarktungsstart: dt.date | None = None  # Ziel der Fortschreibung des Mietansatzes
+    mietwachstum_pa: float | None = None  # g für die Fortschreibung, z. B. 0.02; None = MIETWACHSTUM_PA aus .env
     demo: bool = False  # Teil des synthetischen Demo-Datensatzes
 
 
@@ -118,6 +120,17 @@ class GeoCache(SQLModel, table=True):
     anfrage_hash: str = Field(index=True)
     antwort_json: str
     abgerufen_am: dt.datetime
+
+
+class Wohnung(SQLModel, table=True):
+    """Eine Wohnungsart im Wohnungsmix des Projekts (Projektdaten, vom Nutzer erfasst)."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    projekt_id: int = Field(foreign_key="projekt.id", index=True)
+    typ: str  # Regel | EG | DG, wie bei den Comps
+    zimmer: float
+    wohnflaeche: float  # je Wohnung in m²
+    anzahl: int
 
 
 class Lauf(SQLModel, table=True):

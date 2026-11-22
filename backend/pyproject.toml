@@ -17,6 +17,7 @@ dependencies = [
   "langchain-anthropic>=1.0",
   "langgraph>=1.0",
   "langgraph-checkpoint-sqlite>=3.0",
+  "python-pptx>=1.0",
 ]
 
 [project.optional-dependencies]
