@@ -2,7 +2,7 @@
 // weitere Quellen und Merkliste rechts. Ohne Logo und Firmenname; Akzent Oliv (CLAUDE.md Regel 5).
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { datum, useApi, type Comp, type Kennzahlen, type Marktkennzahl, type Projekt, type ProjektDetail, type Umfeld } from "../api";
+import { datum, useApi, type Comp, type Kennzahlen, type LaufInfo, type Marktkennzahl, type Projekt, type ProjektDetail, type Umfeld } from "../api";
 import { bauprojekte, screenshots } from "../daten/platzhalter";
 import { de } from "../format";
 import { Merkliste } from "../komponenten/Merkliste";
@@ -12,11 +12,12 @@ import { Karte, EBENEN, type Ebene } from "../komponenten/Karte";
 import { Agentenleiste } from "../komponenten/Agentenleiste";
 import { UmfeldKarte } from "../komponenten/UmfeldKarte";
 import { Kopf, Pills, Vorschlagsliste } from "../komponenten/Gestell";
-import { CompsTabelle, EStern, FehlerZustand, FreigabeKarte, herkunftText, Herleitung, LadeZeilen, LeerZustand, ValueTabelle } from "../komponenten/Bausteine";
+import { CompsTabelle, EStern, FehlerZustand, FreigabeKarte, Herleitung, LadeZeilen, LeerZustand, ValueTabelle } from "../komponenten/Bausteine";
+import { HerkunftMarke } from "../komponenten/Herkunft";
+import { Unterlagen } from "../komponenten/Unterlagen";
+import { useLauf } from "../lauf";
 import { useAdressSuche, useMerkliste, useProjektAnlage, passtZimmer, ZIMMER, type ZimmerFilter } from "../hooks";
 
-// Vorschlag der (Platzhalter-)Freigabe: Comp 6 ausschließen; kommt ab M6 aus dem Agentenlauf
-const AUSSCHLUSS_VORSCHLAG = new Set([6]);
 // Quellenkürzel in der Merkliste
 const KUERZEL: Record<string, string> = { RIWIS: "R", VALUE: "V", IS24: "IS" };
 
@@ -77,7 +78,7 @@ export function Analyse() {
  * Eingabe: geladene API-Daten. Ausgabe: Seite.
  */
 function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail; comps: Comp[]; kennzahlen: Kennzahlen }) {
-  // Agenten, Freigabe, Mietansatz und Merkliste sind bis M3/M6 Platzhalter mit Lindenquartier-Beispielen;
+  // Merkliste, Screenshot und Bauprojekte sind noch Platzhalter mit Lindenquartier-Beispielen;
   // bei einem Projekt ohne Comps wären sie irreführend und bleiben weg
   const mitPlatzhaltern = comps.length > 0;
   const m = useMerkliste(comps.filter((c) => c.gemerkt).map((c) => c.nr), mitPlatzhaltern);
@@ -118,6 +119,13 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
   );
   const [auswahl, setAuswahl] = useState<number | null>(null);
   const [mietansatzOffen, setMietansatzOffen] = useState(false);
+  const [laeufe, laeufeNeu] = useApi<LaufInfo[]>(`/api/projekte/${projekt.id}/laeufe`);
+  const [gesundheit] = useApi<{ ki: boolean }>("/api/gesundheit");
+  const lauf = useLauf(projekt.id, laeufeNeu);
+  const offen = lauf.zustand.offen;
+  // Mietansatz: freigegeben aus dem Lauf, sonst der offene Vorschlag (unbestätigt)
+  const ansatz = lauf.zustand.herleitungen ?? (offen?.art === "mietansatz" ? offen.vorschlag.herleitungen : null);
+  const haupt = ansatz?.regel_eg;
   const sichtbar = comps.filter((c) => passtZimmer(c.zimmer, zimmer));
   // Stern-Zustand und Umschalter für einen Merklisten-Baustein
   const merk = (id: string, titel: string, quelle: string, art: string, folie: string) => ({
@@ -200,7 +208,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
         </span>
       </div>
 
-      {mitPlatzhaltern && <Agentenleiste />}
+      <Agentenleiste lauf={lauf} laeufe={laeufe} ki={gesundheit.status === "bereit" ? gesundheit.daten.ki : null} />
 
       {anlage.status !== "ruhig" && anlage.status !== "laden" && (
         <div className="d-hinweis-leiste" role="alert">
@@ -232,6 +240,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
           </section>
           <section className="d-spalte" aria-label="Umfeld">
             <UmfeldKarte umfeld={umfeld} nochmal={umfeldNochmal} />
+            <Unterlagen projektId={projekt.id} />
           </section>
         </main>
       ) : (
@@ -254,10 +263,10 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
                 {sozio.map((x) => (
                   <div key={x.id}>
                     <dt>{x.bezeichnung}</dt>
-                    <dd className="d-kpi-zahl" title={herkunftText(x)}>
+                    <dd className="d-kpi-zahl">
                       {x.herkunft === "abgelesen" && <span className="d-rd">rd. </span>}
                       {zahl(x)}
-                      {x.einheit && <small>{x.einheit}</small>}
+                      {x.einheit && <small>{x.einheit}</small>} <HerkunftMarke wert={x} quelle={quelle(x.quelle_id)} />
                     </dd>
                     <dd className="d-kpi-vergleich">
                       Stadt {zahl(stadt(x.bezeichnung))}
@@ -303,8 +312,8 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
                 <Saeulen daten={preisklassen} einheit="€/m²" hoehe={110} />
               )}
               {pk.staerkste && (
-                <p className="d-fuss" title={pk.anteil.rechenweg_text}>
-                  {de(pk.anteil.wert, 0)} % zwischen {pk.staerkste.replace("–", " und ")} €/m²
+                <p className="d-fuss">
+                  {de(pk.anteil.wert, 0)} % zwischen {pk.staerkste.replace("–", " und ")} €/m² <HerkunftMarke wert={pk.anteil} />
                 </p>
               )}
             </div>
@@ -337,9 +346,9 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
             {kartenblock}
             <UmfeldKarte umfeld={umfeld} nochmal={umfeldNochmal} />
 
-            {mitPlatzhaltern && (
+            {offen?.art === "mietansatz" && (
               <div id="d-freigabe">
-                <FreigabeKarte verweis={{ href: "#d-comps", text: "Zur Tabelle" }} />
+                <FreigabeKarte key={lauf.laufId} vorschlag={offen.vorschlag} onSenden={lauf.freigeben} sendet={lauf.aktiv} />
               </div>
             )}
 
@@ -353,15 +362,15 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
               ) : sichtbar.length === 0 ? (
                 <LeerZustand titel="Keine Comps mit dieser Zimmerzahl" text="Filter auf „Alle“ stellen oder weitere Exposés importieren." aktion="Exposés importieren" />
               ) : (
-                <CompsTabelle comps={sichtbar} gemerkt={m.compsGemerkt} onStern={m.compUmschalten} ausgewaehlt={auswahl} onAuswahl={setAuswahl} ausgeschlossen={mitPlatzhaltern ? AUSSCHLUSS_VORSCHLAG : undefined} />
+                <CompsTabelle comps={sichtbar} gemerkt={m.compsGemerkt} onStern={m.compUmschalten} ausgewaehlt={auswahl} onAuswahl={setAuswahl} />
               )}
               {comps.length > 0 && (
                 <div className="d-tabellen-fuss">
                   <span>
                     Über alle Zimmerzahlen: Ø Regelgeschoss/EG{" "}
-                    <strong title={zf.regel_eg.rechenweg_text}>{de(zf.regel_eg.wert)} €/m²</strong> (n = {de(zf.regel_eg_n.wert, 0)}) · Ø DG{" "}
-                    <strong title={zf.dg.rechenweg_text}>{de(zf.dg.wert)} €/m²</strong> (n = {de(zf.dg_n.wert, 0)}) ·{" "}
-                    <span title={zf.anfragen_monat.rechenweg_text}>{de(zf.anfragen_monat.wert, 1)}</span> Anfragen je Monat und Inserat
+                    <strong>{de(zf.regel_eg.wert)} €/m²</strong> <HerkunftMarke wert={zf.regel_eg} /> (n = {de(zf.regel_eg_n.wert, 0)}) · Ø DG{" "}
+                    <strong>{de(zf.dg.wert)} €/m²</strong> <HerkunftMarke wert={zf.dg} /> (n = {de(zf.dg_n.wert, 0)}) ·{" "}
+                    {de(zf.anfragen_monat.wert, 1)} <HerkunftMarke wert={zf.anfragen_monat} /> Anfragen je Monat und Inserat
                   </span>
                   <span className="d-leise">km: L = Luftlinie (Wegezeiten folgen mit M4)</span>
                 </div>
@@ -390,10 +399,10 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
                   return (
                     <div key={x.id}>
                       <dt>{x.bezeichnung}</dt>
-                      <dd className={`d-kpi-zahl${veraenderung ? " d-akzent" : ""}`} title={herkunftText(x)}>
+                      <dd className={`d-kpi-zahl${veraenderung ? " d-akzent" : ""}`}>
                         {veraenderung && "+"}
                         {zahl(x)}
-                        {x.einheit && <small>{x.einheit}</small>}
+                        {x.einheit && <small>{x.einheit}</small>} <HerkunftMarke wert={x} quelle={quelle(x.quelle_id)} />
                       </dd>
                     </div>
                   );
@@ -402,21 +411,32 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
               {gruppe(k, "value_tabelle").length > 0 && <ValueTabelle werte={gruppe(k, "value_tabelle")} />}
             </div>
 
-            {mitPlatzhaltern && (
-              <div className="d-karte">
-                <div className="d-karte-kopf">
-                  <h3>Mietansatz</h3>
-                  <span className="d-akzent d-klein">Vorschlag, unbestätigt</span>
-                </div>
-                <p className="d-ansatz">
-                  17,60 <small>€/m²</small>
-                </p>
-                <button type="button" className="d-link" aria-expanded={mietansatzOffen} onClick={() => setMietansatzOffen((o) => !o)}>
-                  {mietansatzOffen ? "Herleitung schließen" : "Herleitung: Beleg → Annahme → Zahl"}
-                </button>
-                {mietansatzOffen && <Herleitung />}
+            <div className="d-karte">
+              <div className="d-karte-kopf">
+                <h3>Mietansatz</h3>
+                {haupt && <span className="d-akzent d-klein">{lauf.zustand.herleitungen ? "freigegeben" : "Vorschlag, unbestätigt"}</span>}
               </div>
-            )}
+              {!ansatz || !haupt ? (
+                <LeerZustand titel="Noch kein Mietansatz" text="Analyse starten: der Mietansatz-Agent leitet ihn aus den Comps her und legt ihn dir zur Freigabe vor." />
+              ) : (
+                <>
+                  <p className="d-ansatz">
+                    {de(haupt.ergebnis.wert)} <small>€/m²</small> <HerkunftMarke wert={haupt.ergebnis} />
+                  </p>
+                  {haupt.fortgeschrieben && (
+                    <p className="d-leise d-klein">
+                      bei Vermarktungsstart {de(haupt.fortgeschrieben.wert)} €/m² <HerkunftMarke wert={haupt.fortgeschrieben} />
+                    </p>
+                  )}
+                  <button type="button" className="d-link" aria-expanded={mietansatzOffen} onClick={() => setMietansatzOffen((o) => !o)}>
+                    {mietansatzOffen ? "Herleitung schließen" : "Herleitung: Basis → Zu-/Abschläge → Ergebnis"}
+                  </button>
+                  {mietansatzOffen && <Herleitung herleitungen={ansatz} />}
+                </>
+              )}
+            </div>
+
+            <Unterlagen projektId={projekt.id} />
 
             <div className="d-karte">
               <div className="d-karte-kopf">
@@ -426,9 +446,9 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
               {gruppe(k, "weitere").length === 0 && <p className="d-leise">Noch keine amtlichen Werte erfasst.</p>}
               <ul className="d-quellenliste">
                 {gruppe(k, "weitere").map((x) => (
-                  <li key={x.id} title={herkunftText(x)}>
+                  <li key={x.id}>
                     <span>
-                      {x.bezeichnung}: <strong>{zahl(x)}{x.einheit && ` ${x.einheit}`}</strong>
+                      {x.bezeichnung}: <strong>{zahl(x)}{x.einheit && ` ${x.einheit}`}</strong> <HerkunftMarke wert={x} quelle={quelle(x.quelle_id)} />
                     </span>
                     <span className="d-leise">
                       {quelle(x.quelle_id)?.name} · {quelle(x.quelle_id)?.stand}

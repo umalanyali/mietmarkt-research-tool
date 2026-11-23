@@ -129,7 +129,7 @@ export function Karte({
       setGeladen("bereit");
       const stil = getComputedStyle(behaelter.current!);
       // Ringfarbe aus dem CSS-Token lesen, damit die Karte der Palette folgt
-      const ring = stil.getPropertyValue("--karte-ring").trim() || "#000";
+      const ring = stil.getPropertyValue("--karte-ring").trim(); // in tokens.css auf :root, also immer gesetzt
       karte.addSource("ringe", {
         type: "geojson",
         data: {

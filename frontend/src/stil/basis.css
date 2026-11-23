@@ -35,7 +35,7 @@ button.km { cursor: pointer; }
 
 /* Seitengrundlage (vorher im alten Prototyp global gesetzt) */
 *, *::before, *::after { box-sizing: border-box; }
-html, body { margin: 0; background: #f3f1ec; -webkit-font-smoothing: antialiased; }
+html, body { margin: 0; background: var(--bg); -webkit-font-smoothing: antialiased; }
 
 /* Diagramme (komponenten/Diagramme.tsx) */
 .diagramm { position: relative; }

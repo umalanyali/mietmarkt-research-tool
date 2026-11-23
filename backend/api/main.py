@@ -6,6 +6,7 @@ import uuid
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
@@ -49,6 +50,32 @@ from mietmarkt.modelle import CompBasis, Dokument, Lauf, Marktkennzahl, Projekt,
 app = FastAPI(title="Mietmarkt Research", version=__version__)
 # Nur Anfragen an localhost: schützt vor DNS-Rebinding (eine fremde Domain, die auf 127.0.0.1 zeigt)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])
+
+
+class EigeneHerkunft:
+    """CSRF-Schutz: schreibende Anfragen nur ohne Origin (curl, Tests) oder von localhost/127.0.0.1 (eigene Oberfläche).
+
+    Warum: Formulare und fetch(mode "no-cors") fremder Websites erreichen 127.0.0.1 ohne CORS-Vorabprüfung; der Host-
+    Header passt dabei immer. Reines ASGI statt BaseHTTPMiddleware, damit Ereignisströme unverändert durchlaufen.
+    """
+
+    def __init__(self, app) -> None:
+        """Eingabe: die innere ASGI-Anwendung. Ausgabe: keine."""
+        self.app = app
+
+    async def __call__(self, scope, receive, send) -> None:
+        """Weist POST/PUT/DELETE mit fremdem Origin mit 403 ab. Eingabe: ASGI-Scope, receive, send. Ausgabe: keine."""
+        if scope["type"] == "http" and scope["method"] not in ("GET", "HEAD", "OPTIONS"):
+            origin = dict(scope["headers"]).get(b"origin")
+            # „null“ (Sandbox, Datei) hat keinen Hostnamen und wird ebenfalls abgewiesen
+            if origin is not None and urlsplit(origin.decode("latin-1")).hostname not in ("localhost", "127.0.0.1"):
+                await JSONResponse(status_code=403, content={"detail": "Anfrage von fremder Website abgewiesen"})(
+                    scope, receive, send)
+                return
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(EigeneHerkunft)
 logger = logging.getLogger("mietmarkt.laeufe")
 
 
@@ -311,6 +338,26 @@ def lauf_starten(projekt_id: int, s: Sitzung, k: KonfigDep) -> dict[str, str]:
     s.add(lauf)
     s.commit()
     return {"lauf_id": lauf.id}
+
+
+class LaufAus(BaseModel):
+    """Ein Lauf in der Laufliste."""
+
+    id: str
+    gestartet_am: dt.datetime
+    status: Literal["fertig", "abgebrochen", "offen"]
+
+
+@app.get("/api/projekte/{projekt_id}/laeufe")
+def laeufe(projekt_id: int, s: Sitzung) -> list[LaufAus]:
+    """Läufe eines Projekts, neueste zuerst. Eingabe: Projekt-ID. Ausgabe: Liste, 404 ohne Projekt.
+
+    „offen“ heißt pausiert (Freigabe/Rückfrage) oder unterbrochen; GET /ereignisse setzt beide am Checkpoint fort.
+    """
+    _projekt(s, projekt_id)
+    alle = s.exec(select(Lauf).where(Lauf.projekt_id == projekt_id).order_by(Lauf.gestartet_am.desc())).all()
+    return [LaufAus(id=x.id, gestartet_am=x.gestartet_am,
+                    status=json.loads(x.ergebnis)["status"] if x.ergebnis else "offen") for x in alle]
 
 
 # Läufe, deren Ereignisstrom gerade läuft. Ein zweiter Abruf desselben Laufs (Tab, Neuverbindung) bekäme sonst

@@ -1,0 +1,49 @@
+/* Design-Tokens: die einzige Stelle mit Farbwerten (CLAUDE.md Regel 5, warme Neutraltöne und Oliv).
+   Akzent an EINER Stelle änderbar: --akzent / --akzent-hell / --akzent-auf-schwarz. */
+:root {
+  --akzent: #56602f; /* Oliv (CLAUDE.md Regel 5) */
+  --akzent-dunkel: #454d25;
+  --akzent-hell: #eef0e4;
+  --akzent-auf-schwarz: #c7cd9f;
+  --auf-akzent: #ffffff;
+  --bg: #f3f1ec;
+  --flaeche: #ffffff;
+  --linie: #e3e0d8;
+  --linie-stark: #8c877d;
+  --text: #1a1a19;
+  --text-leise: #6b6862;
+  --schwarz: #121212;
+  --reihe-2: #1a1a19;
+  --reihe-3: #9a958a;
+  --karte-ring: #56602f;
+  --sans: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --t-11: 11px;
+  --t-12: 12px;
+  --t-13: 13px;
+  --t-14: 14px;
+  --t-15: 15px;
+  --t-17: 17px;
+  --t-22: 22px;
+  --t-28: 28px;
+  --t-56: 56px;
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s7: 32px;
+  --s8: 48px;
+  --s9: 64px;
+  --radius: 10px;
+  --radius-pill: 999px;
+  --weiss: #ffffff;
+  --platzhalter-text: #9b968c;
+  --symbol-leise: #a8a397;
+  --chip: #e9e6df;
+  --flaeche-leicht: #faf9f6;
+  --zeile-hover: #f8f7f3;
+  --schatten: rgba(0, 0, 0, 0.06);
+  --bg-transparent: rgba(243, 241, 236, 0.9);
+  --weiss-transparent: rgba(255, 255, 255, 0.85);
+}

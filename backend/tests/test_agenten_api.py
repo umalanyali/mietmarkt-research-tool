@@ -55,6 +55,7 @@ def test_lauf_starten_und_ereignisse_streamen(client):
     assert typen.index("agent_gestartet") < typen.index("werkzeugaufruf") < typen.index("agent_fertig")
     ende = ereignisse(strom)[-1]
     assert ende["status"] == "abgebrochen" and ende["kosten_eur"] > 0  # Skript endet mit unlesbarer Antwort
+    assert client.get("/api/projekte/1/laeufe").json()[0]["status"] == "abgebrochen"
 
 
 def test_beendeter_lauf_liefert_nur_das_ergebnis(client):
@@ -264,3 +265,15 @@ def test_lauf_wird_auch_ohne_gestarteten_strom_freigegeben(client, tmp_path):
     assert "s1" in main.aktive_laeufe
     asyncio.run(antwort.background())
     assert "s1" not in main.aktive_laeufe
+
+
+def test_laufliste_je_projekt(client, mit_freigabe):
+    """Die Laufliste zeigt je Projekt die Läufe, neueste zuerst; pausierte sind „offen“, beendete „fertig“."""
+    alt = client.post("/api/projekte/1/laeufe").json()["lauf_id"]
+    client.get(f"/api/laeufe/{alt}/ereignisse")  # hält an der Freigabe an
+    assert [(l["id"], l["status"]) for l in client.get("/api/projekte/1/laeufe").json()] == [(alt, "offen")]
+    client.post(f"/api/laeufe/{alt}/freigabe", json={"aktion": "annehmen"})
+    liste = client.get("/api/projekte/1/laeufe").json()
+    assert liste[0]["status"] == "fertig" and liste[0]["gestartet_am"]
+    assert client.get("/api/projekte/2/laeufe").json() == []
+    assert client.get("/api/projekte/999/laeufe").status_code == 404

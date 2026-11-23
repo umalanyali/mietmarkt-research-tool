@@ -1,0 +1,2443 @@
+{
+ "bis_freigabe": [
+  {
+   "typ": "agent_gestartet",
+   "agent": "standort",
+   "auftrag": "Bitte bearbeiten.",
+   "begruendung": "als Nächstes standort",
+   "markierungen": []
+  },
+  {
+   "typ": "kosten",
+   "agent": "supervisor",
+   "modell": "claude-sonnet-5-5",
+   "eingabe_tokens": 100,
+   "ausgabe_tokens": 50,
+   "eur": {
+    "wert": 0.000602,
+    "einheit": "€",
+    "herkunft": "berechnet",
+    "quelle_id": null,
+    "rechenweg_text": "claude-sonnet-5-5: 100 Token × 2,00 $ + 50 Token × 10,00 $ je Mio. = 0,000700 $ × 0,86 €/$",
+    "fundstelle": "",
+    "ausschnitt": null
+   }
+  },
+  {
+   "typ": "text",
+   "agent": "standort",
+   "text": "Der "
+  },
+  {
+   "typ": "text",
+   "agent": "standort",
+   "text": "Standort "
+  },
+  {
+   "typ": "text",
+   "agent": "standort",
+   "text": "liegt "
+  },
+  {
+   "typ": "text",
+   "agent": "standort",
+   "text": "ruhig, "
+  },
+  {
+   "typ": "text",
+   "agent": "standort",
+   "text": "Haltestellen "
+  },
+  {
+   "typ": "text",
+   "agent": "standort",
+   "text": "sind "
+  },
+  {
+   "typ": "text",
+   "agent": "standort",
+   "text": "fußläufig "
+  },
+  {
+   "typ": "text",
+   "agent": "standort",
+   "text": "erreichbar."
+  },
+  {
+   "typ": "kosten",
+   "agent": "standort",
+   "modell": "claude-haiku-5-5",
+   "eingabe_tokens": 100,
+   "ausgabe_tokens": 50,
+   "eur": {
+    "wert": 3.0099999999999996e-05,
+    "einheit": "€",
+    "herkunft": "berechnet",
+    "quelle_id": null,
+    "rechenweg_text": "claude-haiku-5-5: 100 Token × 0,10 $ + 50 Token × 0,50 $ je Mio. = 0,000035 $ × 0,86 €/$",
+    "fundstelle": "",
+    "ausschnitt": null
+   }
+  },
+  {
+   "typ": "agent_fertig",
+   "agent": "standort",
+   "text": "Der Standort liegt ruhig, Haltestellen sind fußläufig erreichbar.",
+   "markierungen": []
+  },
+  {
+   "typ": "agent_gestartet",
+   "agent": "marktdaten",
+   "auftrag": "Bitte bearbeiten.",
+   "begruendung": "als Nächstes marktdaten",
+   "markierungen": []
+  },
+  {
+   "typ": "kosten",
+   "agent": "supervisor",
+   "modell": "claude-sonnet-5-5",
+   "eingabe_tokens": 100,
+   "ausgabe_tokens": 50,
+   "eur": {
+    "wert": 0.000602,
+    "einheit": "€",
+    "herkunft": "berechnet",
+    "quelle_id": null,
+    "rechenweg_text": "claude-sonnet-5-5: 100 Token × 2,00 $ + 50 Token × 10,00 $ je Mio. = 0,000700 $ × 0,86 €/$",
+    "fundstelle": "",
+    "ausschnitt": null
+   }
+  },
+  {
+   "typ": "werkzeugaufruf",
+   "agent": "marktdaten",
+   "werkzeug": "kennzahlen",
+   "argumente": {}
+  },
+  {
+   "typ": "kosten",
+   "agent": "marktdaten",
+   "modell": "claude-haiku-5-5",
+   "eingabe_tokens": 100,
+   "ausgabe_tokens": 50,
+   "eur": {
+    "wert": 3.0099999999999996e-05,
+    "einheit": "€",
+    "herkunft": "berechnet",
+    "quelle_id": null,
+    "rechenweg_text": "claude-haiku-5-5: 100 Token × 0,10 $ + 50 Token × 0,50 $ je Mio. = 0,000035 $ × 0,86 €/$",
+    "fundstelle": "",
+    "ausschnitt": null
+   }
+  },
+  {
+   "typ": "werkzeugergebnis",
+   "agent": "marktdaten",
+   "werkzeug": "kennzahlen",
+   "ergebnis": {
+    "comps": {
+     "regel_eg": {
+      "wert": 16.962457337883958,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "Σ Kaltmiete 9.940,00 € / Σ Wohnfläche 586,0 m² = 16,96 €/m² (n = 9)",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "regel_eg_n": {
+      "wert": 9.0,
+      "einheit": "",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "9 Comps (Nr. 1, 3, 4, 6, 7, 9, 10, 11, 12)",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "dg": {
+      "wert": 19.156028368794328,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "Σ Kaltmiete 5.402,00 € / Σ Wohnfläche 282,0 m² = 19,16 €/m² (n = 3)",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "dg_n": {
+      "wert": 3.0,
+      "einheit": "",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "3 Comps (Nr. 2, 5, 8)",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "anfragen_monat": {
+      "wert": 24.09703123673712,
+      "einheit": "Anfragen/Monat",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "(36,2 + 22,5 + 38,6 + 27,1 + 8,6 + 32,5 + 6,9 + 26,7 + 14,3 + 7,8 + 44,0) / 11 = 24,1 je Inserat; nicht gezählt (unter 7 Tagen online oder ohne Angaben): Nr. 6",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "anzahl": {
+      "wert": 12.0,
+      "einheit": "",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "12 Comps (Nr. 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "median": {
+      "wert": 17.661248765405592,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "Median der sortierten €/m² (15,35; 16,48; 16,50; 16,80; 17,00; 17,33; 17,99; 18,08; 18,50; 19,07; 19,11; 20,00): 17,66",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "q1": {
+      "wert": 16.722243037342324,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "25-%-Quartil, lineare Interpolation (inklusiv) über 15,35; 16,48; 16,50; 16,80; 17,00; 17,33; 17,99; 18,08; 18,50; 19,07; 19,11; 20,00: 16,72",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "q3": {
+      "wert": 18.646873390235307,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "75-%-Quartil, lineare Interpolation (inklusiv) über 15,35; 16,48; 16,50; 16,80; 17,00; 17,33; 17,99; 18,08; 18,50; 19,07; 19,11; 20,00: 18,65",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "mittel_flaechengewichtet": {
+      "wert": 17.67511520737327,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "Σ Kaltmiete 15.342,00 € / Σ Wohnfläche 868,0 m² = 17,68 €/m² (n = 12)",
+      "fundstelle": "",
+      "ausschnitt": null
+     }
+    },
+    "marktkennzahlen": [
+     {
+      "bezeichnung": "Einwohner",
+      "kategorie": "",
+      "gebiet": "Ortsteil Nordstadt",
+      "wert": 18460.0,
+      "einheit": "Einwohner",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Einwohner",
+      "kategorie": "",
+      "gebiet": "Stadt",
+      "wert": 204300.0,
+      "einheit": "Einwohner",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Haushalte",
+      "kategorie": "",
+      "gebiet": "Ortsteil Nordstadt",
+      "wert": 9870.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Haushalte",
+      "kategorie": "",
+      "gebiet": "Stadt",
+      "wert": 108900.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø Personen je HH",
+      "kategorie": "",
+      "gebiet": "Ortsteil Nordstadt",
+      "wert": 1.87,
+      "einheit": "",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø Personen je HH",
+      "kategorie": "",
+      "gebiet": "Stadt",
+      "wert": 1.88,
+      "einheit": "",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Kaufkraft je Einw.",
+      "kategorie": "",
+      "gebiet": "Ortsteil Nordstadt",
+      "wert": 26900.0,
+      "einheit": "€",
+      "stellen": 0,
+      "herkunft": "abgelesen",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Kaufkraft je Einw.",
+      "kategorie": "",
+      "gebiet": "Stadt",
+      "wert": 25100.0,
+      "einheit": "€",
+      "stellen": 0,
+      "herkunft": "abgelesen",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Arbeitslosenquote",
+      "kategorie": "",
+      "gebiet": "Ortsteil Nordstadt",
+      "wert": 5.4,
+      "einheit": "%",
+      "stellen": 1,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Arbeitslosenquote",
+      "kategorie": "",
+      "gebiet": "Stadt",
+      "wert": 6.9,
+      "einheit": "%",
+      "stellen": 1,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø PLZ 12345",
+      "kategorie": "Q4/24",
+      "gebiet": "PLZ 12345",
+      "wert": 15.1,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø PLZ 12345",
+      "kategorie": "Q1/25",
+      "gebiet": "PLZ 12345",
+      "wert": 14.8,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø PLZ 12345",
+      "kategorie": "Q2/25",
+      "gebiet": "PLZ 12345",
+      "wert": 15.4,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø PLZ 12345",
+      "kategorie": "Q3/25",
+      "gebiet": "PLZ 12345",
+      "wert": 15.9,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø PLZ 12345",
+      "kategorie": "Q4/25",
+      "gebiet": "PLZ 12345",
+      "wert": 16.3,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø PLZ 12345",
+      "kategorie": "Q1/26",
+      "gebiet": "PLZ 12345",
+      "wert": 16.2,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø PLZ 12345",
+      "kategorie": "Q2/26",
+      "gebiet": "PLZ 12345",
+      "wert": 16.6,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø PLZ 12345",
+      "kategorie": "Q3/26",
+      "gebiet": "PLZ 12345",
+      "wert": 16.1,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø Musterstadt",
+      "kategorie": "Q4/24",
+      "gebiet": "Stadt",
+      "wert": 14.2,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø Musterstadt",
+      "kategorie": "Q1/25",
+      "gebiet": "Stadt",
+      "wert": 14.4,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø Musterstadt",
+      "kategorie": "Q2/25",
+      "gebiet": "Stadt",
+      "wert": 14.6,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø Musterstadt",
+      "kategorie": "Q3/25",
+      "gebiet": "Stadt",
+      "wert": 14.9,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø Musterstadt",
+      "kategorie": "Q4/25",
+      "gebiet": "Stadt",
+      "wert": 15.1,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø Musterstadt",
+      "kategorie": "Q1/26",
+      "gebiet": "Stadt",
+      "wert": 15.3,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø Musterstadt",
+      "kategorie": "Q2/26",
+      "gebiet": "Stadt",
+      "wert": 15.6,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Ø Musterstadt",
+      "kategorie": "Q3/26",
+      "gebiet": "Stadt",
+      "wert": 15.8,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "95-%-Quantil",
+      "kategorie": "Q4/24",
+      "gebiet": "PLZ 12345",
+      "wert": 18.6,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "95-%-Quantil",
+      "kategorie": "Q1/25",
+      "gebiet": "PLZ 12345",
+      "wert": 18.9,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "95-%-Quantil",
+      "kategorie": "Q2/25",
+      "gebiet": "PLZ 12345",
+      "wert": 19.0,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "95-%-Quantil",
+      "kategorie": "Q3/25",
+      "gebiet": "PLZ 12345",
+      "wert": 19.4,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "95-%-Quantil",
+      "kategorie": "Q4/25",
+      "gebiet": "PLZ 12345",
+      "wert": 20.6,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "95-%-Quantil",
+      "kategorie": "Q1/26",
+      "gebiet": "PLZ 12345",
+      "wert": 21.2,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "95-%-Quantil",
+      "kategorie": "Q2/26",
+      "gebiet": "PLZ 12345",
+      "wert": 21.3,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "95-%-Quantil",
+      "kategorie": "Q3/26",
+      "gebiet": "PLZ 12345",
+      "wert": 21.4,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Angebote",
+      "kategorie": "< 12",
+      "gebiet": "PLZ 12345",
+      "wert": 4.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Angebote",
+      "kategorie": "12–13,50",
+      "gebiet": "PLZ 12345",
+      "wert": 6.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Angebote",
+      "kategorie": "13,50–15",
+      "gebiet": "PLZ 12345",
+      "wert": 14.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Angebote",
+      "kategorie": "15–16,50",
+      "gebiet": "PLZ 12345",
+      "wert": 21.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Angebote",
+      "kategorie": "16,50–18",
+      "gebiet": "PLZ 12345",
+      "wert": 38.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Angebote",
+      "kategorie": "18–19,50",
+      "gebiet": "PLZ 12345",
+      "wert": 13.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Angebote",
+      "kategorie": "19,50–21",
+      "gebiet": "PLZ 12345",
+      "wert": 6.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Angebote",
+      "kategorie": "> 21",
+      "gebiet": "PLZ 12345",
+      "wert": 3.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 1
+     },
+     {
+      "bezeichnung": "Angebotsmiete Neubau",
+      "kategorie": "",
+      "gebiet": "Umkreis 2 km",
+      "wert": 17.4,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Veränderung 12 Monate",
+      "kategorie": "",
+      "gebiet": "Umkreis 2 km",
+      "wert": 3.8,
+      "einheit": "%",
+      "stellen": 1,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Vermarktungsdauer",
+      "kategorie": "",
+      "gebiet": "Umkreis 2 km",
+      "wert": 36.0,
+      "einheit": "Tage",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Angebote (12 M.)",
+      "kategorie": "",
+      "gebiet": "Umkreis 2 km",
+      "wert": 412.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "n",
+      "kategorie": "1 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 48.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Ø m²",
+      "kategorie": "1 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 37.0,
+      "einheit": "m²",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Min",
+      "kategorie": "1 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 13.9,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Ø",
+      "kategorie": "1 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 19.2,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Median",
+      "kategorie": "1 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 19.05,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "P75",
+      "kategorie": "1 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 20.4,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Max",
+      "kategorie": "1 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 24.8,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "n",
+      "kategorie": "2 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 156.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Ø m²",
+      "kategorie": "2 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 57.0,
+      "einheit": "m²",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Min",
+      "kategorie": "2 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 12.8,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Ø",
+      "kategorie": "2 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 17.6,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Median",
+      "kategorie": "2 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 17.45,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "P75",
+      "kategorie": "2 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 18.7,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Max",
+      "kategorie": "2 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 22.1,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "n",
+      "kategorie": "3 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 131.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Ø m²",
+      "kategorie": "3 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 79.0,
+      "einheit": "m²",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Min",
+      "kategorie": "3 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 12.2,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Ø",
+      "kategorie": "3 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 16.9,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Median",
+      "kategorie": "3 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 16.8,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "P75",
+      "kategorie": "3 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 18.1,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Max",
+      "kategorie": "3 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 21.3,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "n",
+      "kategorie": "4 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 58.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Ø m²",
+      "kategorie": "4 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 98.0,
+      "einheit": "m²",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Min",
+      "kategorie": "4 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 11.9,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Ø",
+      "kategorie": "4 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 16.4,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Median",
+      "kategorie": "4 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 16.25,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "P75",
+      "kategorie": "4 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 17.6,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Max",
+      "kategorie": "4 Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 20.5,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "n",
+      "kategorie": "5+ Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 19.0,
+      "einheit": "",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Ø m²",
+      "kategorie": "5+ Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 128.0,
+      "einheit": "m²",
+      "stellen": 0,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Min",
+      "kategorie": "5+ Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 12.4,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Ø",
+      "kategorie": "5+ Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 16.1,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Median",
+      "kategorie": "5+ Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 15.9,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "P75",
+      "kategorie": "5+ Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 17.2,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Max",
+      "kategorie": "5+ Zi.",
+      "gebiet": "Umkreis 2 km",
+      "wert": 19.8,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "import",
+      "quelle_id": 2
+     },
+     {
+      "bezeichnung": "Einwohner Ortsteil Nordstadt",
+      "kategorie": "",
+      "gebiet": "",
+      "wert": 18460.0,
+      "einheit": "Einwohner",
+      "stellen": 0,
+      "herkunft": "manuell",
+      "quelle_id": 4
+     },
+     {
+      "bezeichnung": "Baufertigstellungen Wohnungen",
+      "kategorie": "2025",
+      "gebiet": "Stadt",
+      "wert": 1240.0,
+      "einheit": "Wohnungen",
+      "stellen": 0,
+      "herkunft": "manuell",
+      "quelle_id": 5
+     },
+     {
+      "bezeichnung": "Mietspiegel Ø Nettokaltmiete",
+      "kategorie": "",
+      "gebiet": "Stadt",
+      "wert": 9.85,
+      "einheit": "€/m²",
+      "stellen": 2,
+      "herkunft": "manuell",
+      "quelle_id": 6
+     }
+    ]
+   }
+  },
+  {
+   "typ": "text",
+   "agent": "marktdaten",
+   "text": "Die "
+  },
+  {
+   "typ": "text",
+   "agent": "marktdaten",
+   "text": "Comps "
+  },
+  {
+   "typ": "text",
+   "agent": "marktdaten",
+   "text": "im "
+  },
+  {
+   "typ": "text",
+   "agent": "marktdaten",
+   "text": "Umkreis "
+  },
+  {
+   "typ": "text",
+   "agent": "marktdaten",
+   "text": "sind "
+  },
+  {
+   "typ": "text",
+   "agent": "marktdaten",
+   "text": "ausgewertet."
+  },
+  {
+   "typ": "kosten",
+   "agent": "marktdaten",
+   "modell": "claude-haiku-5-5",
+   "eingabe_tokens": 100,
+   "ausgabe_tokens": 50,
+   "eur": {
+    "wert": 3.0099999999999996e-05,
+    "einheit": "€",
+    "herkunft": "berechnet",
+    "quelle_id": null,
+    "rechenweg_text": "claude-haiku-5-5: 100 Token × 0,10 $ + 50 Token × 0,50 $ je Mio. = 0,000035 $ × 0,86 €/$",
+    "fundstelle": "",
+    "ausschnitt": null
+   }
+  },
+  {
+   "typ": "agent_fertig",
+   "agent": "marktdaten",
+   "text": "Die Comps im Umkreis sind ausgewertet.",
+   "markierungen": []
+  },
+  {
+   "typ": "agent_gestartet",
+   "agent": "mietansatz",
+   "auftrag": "Bitte bearbeiten.",
+   "begruendung": "als Nächstes mietansatz",
+   "markierungen": []
+  },
+  {
+   "typ": "kosten",
+   "agent": "supervisor",
+   "modell": "claude-sonnet-5-5",
+   "eingabe_tokens": 100,
+   "ausgabe_tokens": 50,
+   "eur": {
+    "wert": 0.000602,
+    "einheit": "€",
+    "herkunft": "berechnet",
+    "quelle_id": null,
+    "rechenweg_text": "claude-sonnet-5-5: 100 Token × 2,00 $ + 50 Token × 10,00 $ je Mio. = 0,000700 $ × 0,86 €/$",
+    "fundstelle": "",
+    "ausschnitt": null
+   }
+  },
+  {
+   "typ": "werkzeugaufruf",
+   "agent": "mietansatz",
+   "werkzeug": "mietansatz_herleiten",
+   "argumente": {
+    "basis": "regel_eg",
+    "anpassungen": [
+     {
+      "name": "Energiestandard",
+      "betrag": 0.3,
+      "begruendung": "Effizienzhaus 40 statt 55 bei den Comps"
+     }
+    ]
+   }
+  },
+  {
+   "typ": "werkzeugaufruf",
+   "agent": "mietansatz",
+   "werkzeug": "mietansatz_herleiten",
+   "argumente": {
+    "basis": "dg",
+    "anpassungen": []
+   }
+  },
+  {
+   "typ": "kosten",
+   "agent": "mietansatz",
+   "modell": "claude-sonnet-5-5",
+   "eingabe_tokens": 100,
+   "ausgabe_tokens": 50,
+   "eur": {
+    "wert": 0.000602,
+    "einheit": "€",
+    "herkunft": "berechnet",
+    "quelle_id": null,
+    "rechenweg_text": "claude-sonnet-5-5: 100 Token × 2,00 $ + 50 Token × 10,00 $ je Mio. = 0,000700 $ × 0,86 €/$",
+    "fundstelle": "",
+    "ausschnitt": null
+   }
+  },
+  {
+   "typ": "werkzeugergebnis",
+   "agent": "mietansatz",
+   "werkzeug": "mietansatz_herleiten",
+   "ergebnis": {
+    "basis": "regel_eg",
+    "schritte": [
+     {
+      "art": "basis",
+      "name": "Basis",
+      "wert": {
+       "wert": 16.962457337883958,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "Ø flächengewichtet Regelgeschoss/EG-Comps: Σ Kaltmiete 9.940,00 € / Σ Wohnfläche 586,0 m² = 16,96 €/m² (n = 9)",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "begruendung": ""
+     },
+     {
+      "art": "anpassung",
+      "name": "Energiestandard",
+      "wert": {
+       "wert": 0.3,
+       "einheit": "€/m²",
+       "herkunft": "ki",
+       "quelle_id": null,
+       "rechenweg_text": "+ 0,30 €/m² (Effizienzhaus 40 statt 55 bei den Comps)",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "begruendung": "Effizienzhaus 40 statt 55 bei den Comps"
+     },
+     {
+      "art": "ergebnis",
+      "name": "Ergebnis",
+      "wert": {
+       "wert": 17.26245733788396,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "16,96 + 0,30 = 17,26 €/m²",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "begruendung": ""
+     },
+     {
+      "art": "fortschreibung",
+      "name": "Fortschreibung bis Vermarktungsstart",
+      "wert": {
+       "wert": 17.549689137122833,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "17,26 × (1 + 2,0 %)^(10/12) = 17,55 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "begruendung": ""
+     }
+    ],
+    "ergebnis": {
+     "wert": 17.26245733788396,
+     "einheit": "€/m²",
+     "herkunft": "berechnet",
+     "quelle_id": null,
+     "rechenweg_text": "16,96 + 0,30 = 17,26 €/m²",
+     "fundstelle": "",
+     "ausschnitt": null
+    },
+    "fortgeschrieben": {
+     "wert": 17.549689137122833,
+     "einheit": "€/m²",
+     "herkunft": "berechnet",
+     "quelle_id": null,
+     "rechenweg_text": "17,26 × (1 + 2,0 %)^(10/12) = 17,55 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+     "fundstelle": "",
+     "ausschnitt": null
+    }
+   }
+  },
+  {
+   "typ": "werkzeugergebnis",
+   "agent": "mietansatz",
+   "werkzeug": "mietansatz_herleiten",
+   "ergebnis": {
+    "basis": "dg",
+    "schritte": [
+     {
+      "art": "basis",
+      "name": "Basis",
+      "wert": {
+       "wert": 19.156028368794328,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "Ø flächengewichtet DG-Comps: Σ Kaltmiete 5.402,00 € / Σ Wohnfläche 282,0 m² = 19,16 €/m² (n = 3)",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "begruendung": ""
+     },
+     {
+      "art": "ergebnis",
+      "name": "Ergebnis",
+      "wert": {
+       "wert": 19.156028368794328,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "19,16 €/m² (keine Zu- oder Abschläge)",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "begruendung": ""
+     },
+     {
+      "art": "fortschreibung",
+      "name": "Fortschreibung bis Vermarktungsstart",
+      "wert": {
+       "wert": 19.474767490747993,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "19,16 × (1 + 2,0 %)^(10/12) = 19,47 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "begruendung": ""
+     }
+    ],
+    "ergebnis": {
+     "wert": 19.156028368794328,
+     "einheit": "€/m²",
+     "herkunft": "berechnet",
+     "quelle_id": null,
+     "rechenweg_text": "19,16 €/m² (keine Zu- oder Abschläge)",
+     "fundstelle": "",
+     "ausschnitt": null
+    },
+    "fortgeschrieben": {
+     "wert": 19.474767490747993,
+     "einheit": "€/m²",
+     "herkunft": "berechnet",
+     "quelle_id": null,
+     "rechenweg_text": "19,16 × (1 + 2,0 %)^(10/12) = 19,47 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+     "fundstelle": "",
+     "ausschnitt": null
+    }
+   }
+  },
+  {
+   "typ": "text",
+   "agent": "mietansatz",
+   "text": "Basis "
+  },
+  {
+   "typ": "text",
+   "agent": "mietansatz",
+   "text": "aus "
+  },
+  {
+   "typ": "text",
+   "agent": "mietansatz",
+   "text": "den "
+  },
+  {
+   "typ": "text",
+   "agent": "mietansatz",
+   "text": "Regelgeschoss-Comps, "
+  },
+  {
+   "typ": "text",
+   "agent": "mietansatz",
+   "text": "Zuschlag "
+  },
+  {
+   "typ": "text",
+   "agent": "mietansatz",
+   "text": "für "
+  },
+  {
+   "typ": "text",
+   "agent": "mietansatz",
+   "text": "den "
+  },
+  {
+   "typ": "text",
+   "agent": "mietansatz",
+   "text": "besseren "
+  },
+  {
+   "typ": "text",
+   "agent": "mietansatz",
+   "text": "Energiestandard."
+  },
+  {
+   "typ": "kosten",
+   "agent": "mietansatz",
+   "modell": "claude-sonnet-5-5",
+   "eingabe_tokens": 100,
+   "ausgabe_tokens": 50,
+   "eur": {
+    "wert": 0.000602,
+    "einheit": "€",
+    "herkunft": "berechnet",
+    "quelle_id": null,
+    "rechenweg_text": "claude-sonnet-5-5: 100 Token × 2,00 $ + 50 Token × 10,00 $ je Mio. = 0,000700 $ × 0,86 €/$",
+    "fundstelle": "",
+    "ausschnitt": null
+   }
+  },
+  {
+   "typ": "agent_fertig",
+   "agent": "mietansatz",
+   "text": "Basis aus den Regelgeschoss-Comps, Zuschlag für den besseren Energiestandard.",
+   "markierungen": []
+  },
+  {
+   "typ": "wartet_auf_freigabe",
+   "art": "mietansatz",
+   "vorschlag": {
+    "herleitungen": {
+     "regel_eg": {
+      "basis": "regel_eg",
+      "schritte": [
+       {
+        "art": "basis",
+        "name": "Basis",
+        "wert": {
+         "wert": 16.962457337883958,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "Ø flächengewichtet Regelgeschoss/EG-Comps: Σ Kaltmiete 9.940,00 € / Σ Wohnfläche 586,0 m² = 16,96 €/m² (n = 9)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       },
+       {
+        "art": "anpassung",
+        "name": "Energiestandard",
+        "wert": {
+         "wert": 0.3,
+         "einheit": "€/m²",
+         "herkunft": "ki",
+         "quelle_id": null,
+         "rechenweg_text": "+ 0,30 €/m² (Effizienzhaus 40 statt 55 bei den Comps)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": "Effizienzhaus 40 statt 55 bei den Comps"
+       },
+       {
+        "art": "ergebnis",
+        "name": "Ergebnis",
+        "wert": {
+         "wert": 17.26245733788396,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "16,96 + 0,30 = 17,26 €/m²",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       },
+       {
+        "art": "fortschreibung",
+        "name": "Fortschreibung bis Vermarktungsstart",
+        "wert": {
+         "wert": 17.549689137122833,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "17,26 × (1 + 2,0 %)^(10/12) = 17,55 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       }
+      ],
+      "ergebnis": {
+       "wert": 17.26245733788396,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "16,96 + 0,30 = 17,26 €/m²",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "fortgeschrieben": {
+       "wert": 17.549689137122833,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "17,26 × (1 + 2,0 %)^(10/12) = 17,55 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+       "fundstelle": "",
+       "ausschnitt": null
+      }
+     },
+     "dg": {
+      "basis": "dg",
+      "schritte": [
+       {
+        "art": "basis",
+        "name": "Basis",
+        "wert": {
+         "wert": 19.156028368794328,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "Ø flächengewichtet DG-Comps: Σ Kaltmiete 5.402,00 € / Σ Wohnfläche 282,0 m² = 19,16 €/m² (n = 3)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       },
+       {
+        "art": "ergebnis",
+        "name": "Ergebnis",
+        "wert": {
+         "wert": 19.156028368794328,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "19,16 €/m² (keine Zu- oder Abschläge)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       },
+       {
+        "art": "fortschreibung",
+        "name": "Fortschreibung bis Vermarktungsstart",
+        "wert": {
+         "wert": 19.474767490747993,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "19,16 × (1 + 2,0 %)^(10/12) = 19,47 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       }
+      ],
+      "ergebnis": {
+       "wert": 19.156028368794328,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "19,16 €/m² (keine Zu- oder Abschläge)",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "fortgeschrieben": {
+       "wert": 19.474767490747993,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "19,16 × (1 + 2,0 %)^(10/12) = 19,47 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+       "fundstelle": "",
+       "ausschnitt": null
+      }
+     }
+    },
+    "begruendung": "Basis aus den Regelgeschoss-Comps, Zuschlag für den besseren Energiestandard.",
+    "markierungen": []
+   }
+  }
+ ],
+ "nach_freigabe": [
+  {
+   "typ": "freigabe",
+   "aktion": "annehmen",
+   "aenderungen": null,
+   "kommentar": null,
+   "herleitungen": {
+    "regel_eg": {
+     "basis": "regel_eg",
+     "schritte": [
+      {
+       "art": "basis",
+       "name": "Basis",
+       "wert": {
+        "wert": 16.962457337883958,
+        "einheit": "€/m²",
+        "herkunft": "berechnet",
+        "quelle_id": null,
+        "rechenweg_text": "Ø flächengewichtet Regelgeschoss/EG-Comps: Σ Kaltmiete 9.940,00 € / Σ Wohnfläche 586,0 m² = 16,96 €/m² (n = 9)",
+        "fundstelle": "",
+        "ausschnitt": null
+       },
+       "begruendung": ""
+      },
+      {
+       "art": "anpassung",
+       "name": "Energiestandard",
+       "wert": {
+        "wert": 0.3,
+        "einheit": "€/m²",
+        "herkunft": "ki",
+        "quelle_id": null,
+        "rechenweg_text": "+ 0,30 €/m² (Effizienzhaus 40 statt 55 bei den Comps)",
+        "fundstelle": "",
+        "ausschnitt": null
+       },
+       "begruendung": "Effizienzhaus 40 statt 55 bei den Comps"
+      },
+      {
+       "art": "ergebnis",
+       "name": "Ergebnis",
+       "wert": {
+        "wert": 17.26245733788396,
+        "einheit": "€/m²",
+        "herkunft": "berechnet",
+        "quelle_id": null,
+        "rechenweg_text": "16,96 + 0,30 = 17,26 €/m²",
+        "fundstelle": "",
+        "ausschnitt": null
+       },
+       "begruendung": ""
+      },
+      {
+       "art": "fortschreibung",
+       "name": "Fortschreibung bis Vermarktungsstart",
+       "wert": {
+        "wert": 17.549689137122833,
+        "einheit": "€/m²",
+        "herkunft": "berechnet",
+        "quelle_id": null,
+        "rechenweg_text": "17,26 × (1 + 2,0 %)^(10/12) = 17,55 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+        "fundstelle": "",
+        "ausschnitt": null
+       },
+       "begruendung": ""
+      }
+     ],
+     "ergebnis": {
+      "wert": 17.26245733788396,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "16,96 + 0,30 = 17,26 €/m²",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "fortgeschrieben": {
+      "wert": 17.549689137122833,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "17,26 × (1 + 2,0 %)^(10/12) = 17,55 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+      "fundstelle": "",
+      "ausschnitt": null
+     }
+    },
+    "dg": {
+     "basis": "dg",
+     "schritte": [
+      {
+       "art": "basis",
+       "name": "Basis",
+       "wert": {
+        "wert": 19.156028368794328,
+        "einheit": "€/m²",
+        "herkunft": "berechnet",
+        "quelle_id": null,
+        "rechenweg_text": "Ø flächengewichtet DG-Comps: Σ Kaltmiete 5.402,00 € / Σ Wohnfläche 282,0 m² = 19,16 €/m² (n = 3)",
+        "fundstelle": "",
+        "ausschnitt": null
+       },
+       "begruendung": ""
+      },
+      {
+       "art": "ergebnis",
+       "name": "Ergebnis",
+       "wert": {
+        "wert": 19.156028368794328,
+        "einheit": "€/m²",
+        "herkunft": "berechnet",
+        "quelle_id": null,
+        "rechenweg_text": "19,16 €/m² (keine Zu- oder Abschläge)",
+        "fundstelle": "",
+        "ausschnitt": null
+       },
+       "begruendung": ""
+      },
+      {
+       "art": "fortschreibung",
+       "name": "Fortschreibung bis Vermarktungsstart",
+       "wert": {
+        "wert": 19.474767490747993,
+        "einheit": "€/m²",
+        "herkunft": "berechnet",
+        "quelle_id": null,
+        "rechenweg_text": "19,16 × (1 + 2,0 %)^(10/12) = 19,47 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+        "fundstelle": "",
+        "ausschnitt": null
+       },
+       "begruendung": ""
+      }
+     ],
+     "ergebnis": {
+      "wert": 19.156028368794328,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "19,16 €/m² (keine Zu- oder Abschläge)",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "fortgeschrieben": {
+      "wert": 19.474767490747993,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "19,16 × (1 + 2,0 %)^(10/12) = 19,47 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+      "fundstelle": "",
+      "ausschnitt": null
+     }
+    }
+   }
+  },
+  {
+   "typ": "werkzeugergebnis",
+   "agent": "pruefung",
+   "werkzeug": "comps_pruefen",
+   "ergebnis": {
+    "anzahl": {
+     "pruefung": "anzahl",
+     "auffaellig": false,
+     "anzahl": {
+      "wert": 12.0,
+      "einheit": "",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "12 Comps im Umkreis, Mindestzahl 5",
+      "fundstelle": "",
+      "ausschnitt": null
+     }
+    },
+    "alter": {
+     "pruefung": "alter",
+     "auffaellig": false,
+     "veraltet": [],
+     "ohne_datum": []
+    },
+    "ausreisser": {
+     "pruefung": "ausreisser_iqr",
+     "auffaellig": false,
+     "pruefbar": true,
+     "untergrenze": {
+      "wert": 13.83529750800285,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "Q1 16,72 − 1,5 × IQR 1,92 = 13,84 €/m²",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "obergrenze": {
+      "wert": 21.53381891957478,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "Q3 18,65 + 1,5 × IQR 1,92 = 21,53 €/m²",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "ausreisser": []
+    }
+   }
+  },
+  {
+   "typ": "werkzeugergebnis",
+   "agent": "pruefung",
+   "werkzeug": "ansatz_pruefen",
+   "ergebnis": {
+    "pruefung": "abgleich",
+    "auffaellig": false,
+    "ansatz": {
+     "wert": 17.26245733788396,
+     "einheit": "€/m²",
+     "herkunft": "berechnet",
+     "quelle_id": null,
+     "rechenweg_text": "freigegebener Mietansatz",
+     "fundstelle": "",
+     "ausschnitt": null
+    },
+    "vergleiche": [
+     {
+      "kennzahl": "Median Comps",
+      "wert": {
+       "wert": 17.661248765405592,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "Median der sortierten €/m² (15,35; 16,48; 16,50; 16,80; 17,00; 17,33; 17,99; 18,08; 18,50; 19,07; 19,11; 20,00): 17,66",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "auffaellig": false,
+      "abweichung": {
+       "wert": -2.258002436966835,
+       "einheit": "%",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "(17,26 − 17,66) / 17,66 × 100 = -2,3 % (Grenze ± 15 %)",
+       "fundstelle": "",
+       "ausschnitt": null
+      }
+     },
+     {
+      "kennzahl": "Ø flächengewichtet Regelgeschoss/EG",
+      "wert": {
+       "wert": 16.962457337883958,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "Σ Kaltmiete 9.940,00 € / Σ Wohnfläche 586,0 m² = 16,96 €/m² (n = 9)",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "auffaellig": false,
+      "abweichung": {
+       "wert": 1.7686116700201249,
+       "einheit": "%",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "(17,26 − 16,96) / 16,96 × 100 = 1,8 % (Grenze ± 15 %)",
+       "fundstelle": "",
+       "ausschnitt": null
+      }
+     },
+     {
+      "kennzahl": "Angebotsmiete Neubau (Umkreis 2 km)",
+      "wert": {
+       "wert": 17.4,
+       "einheit": "€/m²",
+       "herkunft": "import",
+       "quelle_id": 2,
+       "rechenweg_text": "",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "auffaellig": false,
+      "abweichung": {
+       "wert": -0.7904750696324141,
+       "einheit": "%",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "(17,26 − 17,40) / 17,40 × 100 = -0,8 % (Grenze ± 15 %)",
+       "fundstelle": "",
+       "ausschnitt": null
+      }
+     }
+    ]
+   }
+  },
+  {
+   "typ": "pruefung",
+   "befunde": [
+    {
+     "pruefung": "abgleich",
+     "schweregrad": "hinweis",
+     "text": "Befund hinweis.",
+     "markierungen": []
+    }
+   ],
+   "zurueck": false
+  },
+  {
+   "typ": "kosten",
+   "agent": "pruefung",
+   "modell": "claude-sonnet-5-5",
+   "eingabe_tokens": 100,
+   "ausgabe_tokens": 50,
+   "eur": {
+    "wert": 0.000602,
+    "einheit": "€",
+    "herkunft": "berechnet",
+    "quelle_id": null,
+    "rechenweg_text": "claude-sonnet-5-5: 100 Token × 2,00 $ + 50 Token × 10,00 $ je Mio. = 0,000700 $ × 0,86 €/$",
+    "fundstelle": "",
+    "ausschnitt": null
+   }
+  },
+  {
+   "typ": "bericht",
+   "vorlaeufig": false,
+   "abschnitte": {
+    "lage": "Ruhige Lage am Lindenplatz.",
+    "markt": "Median 17,66 €/m²[^1].",
+    "mietansatz": "Ansatz 17,26 €/m²[^2].",
+    "risiken": "Keine kritischen Befunde."
+   },
+   "fussnoten": [
+    {
+     "nr": 1,
+     "ids": [
+      "kennzahlen.comps.median"
+     ],
+     "herkunft": "berechnet",
+     "verweis": "Median der sortierten €/m² (15,35; 16,48; 16,50; 16,80; 17,00; 17,33; 17,99; 18,08; 18,50; 19,07; 19,11; 20,00): 17,66"
+    },
+    {
+     "nr": 2,
+     "ids": [
+      "mietansatz.regel_eg.ergebnis"
+     ],
+     "herkunft": "berechnet",
+     "verweis": "16,96 + 0,30 = 17,26 €/m²"
+    }
+   ],
+   "markierungen": [],
+   "methoden": [],
+   "korrektur": [],
+   "befunde": [
+    {
+     "pruefung": "abgleich",
+     "schweregrad": "hinweis",
+     "text": "Befund hinweis.",
+     "markierungen": []
+    }
+   ],
+   "herleitungen": {
+    "regel_eg": {
+     "basis": "regel_eg",
+     "schritte": [
+      {
+       "art": "basis",
+       "name": "Basis",
+       "wert": {
+        "wert": 16.962457337883958,
+        "einheit": "€/m²",
+        "herkunft": "berechnet",
+        "quelle_id": null,
+        "rechenweg_text": "Ø flächengewichtet Regelgeschoss/EG-Comps: Σ Kaltmiete 9.940,00 € / Σ Wohnfläche 586,0 m² = 16,96 €/m² (n = 9)",
+        "fundstelle": "",
+        "ausschnitt": null
+       },
+       "begruendung": ""
+      },
+      {
+       "art": "anpassung",
+       "name": "Energiestandard",
+       "wert": {
+        "wert": 0.3,
+        "einheit": "€/m²",
+        "herkunft": "ki",
+        "quelle_id": null,
+        "rechenweg_text": "+ 0,30 €/m² (Effizienzhaus 40 statt 55 bei den Comps)",
+        "fundstelle": "",
+        "ausschnitt": null
+       },
+       "begruendung": "Effizienzhaus 40 statt 55 bei den Comps"
+      },
+      {
+       "art": "ergebnis",
+       "name": "Ergebnis",
+       "wert": {
+        "wert": 17.26245733788396,
+        "einheit": "€/m²",
+        "herkunft": "berechnet",
+        "quelle_id": null,
+        "rechenweg_text": "16,96 + 0,30 = 17,26 €/m²",
+        "fundstelle": "",
+        "ausschnitt": null
+       },
+       "begruendung": ""
+      },
+      {
+       "art": "fortschreibung",
+       "name": "Fortschreibung bis Vermarktungsstart",
+       "wert": {
+        "wert": 17.549689137122833,
+        "einheit": "€/m²",
+        "herkunft": "berechnet",
+        "quelle_id": null,
+        "rechenweg_text": "17,26 × (1 + 2,0 %)^(10/12) = 17,55 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+        "fundstelle": "",
+        "ausschnitt": null
+       },
+       "begruendung": ""
+      }
+     ],
+     "ergebnis": {
+      "wert": 17.26245733788396,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "16,96 + 0,30 = 17,26 €/m²",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "fortgeschrieben": {
+      "wert": 17.549689137122833,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "17,26 × (1 + 2,0 %)^(10/12) = 17,55 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+      "fundstelle": "",
+      "ausschnitt": null
+     }
+    },
+    "dg": {
+     "basis": "dg",
+     "schritte": [
+      {
+       "art": "basis",
+       "name": "Basis",
+       "wert": {
+        "wert": 19.156028368794328,
+        "einheit": "€/m²",
+        "herkunft": "berechnet",
+        "quelle_id": null,
+        "rechenweg_text": "Ø flächengewichtet DG-Comps: Σ Kaltmiete 5.402,00 € / Σ Wohnfläche 282,0 m² = 19,16 €/m² (n = 3)",
+        "fundstelle": "",
+        "ausschnitt": null
+       },
+       "begruendung": ""
+      },
+      {
+       "art": "ergebnis",
+       "name": "Ergebnis",
+       "wert": {
+        "wert": 19.156028368794328,
+        "einheit": "€/m²",
+        "herkunft": "berechnet",
+        "quelle_id": null,
+        "rechenweg_text": "19,16 €/m² (keine Zu- oder Abschläge)",
+        "fundstelle": "",
+        "ausschnitt": null
+       },
+       "begruendung": ""
+      },
+      {
+       "art": "fortschreibung",
+       "name": "Fortschreibung bis Vermarktungsstart",
+       "wert": {
+        "wert": 19.474767490747993,
+        "einheit": "€/m²",
+        "herkunft": "berechnet",
+        "quelle_id": null,
+        "rechenweg_text": "19,16 × (1 + 2,0 %)^(10/12) = 19,47 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+        "fundstelle": "",
+        "ausschnitt": null
+       },
+       "begruendung": ""
+      }
+     ],
+     "ergebnis": {
+      "wert": 19.156028368794328,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "19,16 €/m² (keine Zu- oder Abschläge)",
+      "fundstelle": "",
+      "ausschnitt": null
+     },
+     "fortgeschrieben": {
+      "wert": 19.474767490747993,
+      "einheit": "€/m²",
+      "herkunft": "berechnet",
+      "quelle_id": null,
+      "rechenweg_text": "19,16 × (1 + 2,0 %)^(10/12) = 19,47 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+      "fundstelle": "",
+      "ausschnitt": null
+     }
+    }
+   }
+  },
+  {
+   "typ": "kosten",
+   "agent": "bericht",
+   "modell": "claude-sonnet-5-5",
+   "eingabe_tokens": 100,
+   "ausgabe_tokens": 50,
+   "eur": {
+    "wert": 0.000602,
+    "einheit": "€",
+    "herkunft": "berechnet",
+    "quelle_id": null,
+    "rechenweg_text": "claude-sonnet-5-5: 100 Token × 2,00 $ + 50 Token × 10,00 $ je Mio. = 0,000700 $ × 0,86 €/$",
+    "fundstelle": "",
+    "ausschnitt": null
+   }
+  },
+  {
+   "typ": "fertig",
+   "status": "fertig",
+   "abbruch": null,
+   "rueckfragen": [],
+   "kosten_eur": 0.0043043,
+   "ergebnisse": {
+    "standort": {
+     "text": "Der Standort liegt ruhig, Haltestellen sind fußläufig erreichbar.",
+     "markierungen": []
+    },
+    "marktdaten": {
+     "text": "Die Comps im Umkreis sind ausgewertet.",
+     "markierungen": []
+    },
+    "mietansatz": {
+     "text": "Basis aus den Regelgeschoss-Comps, Zuschlag für den besseren Energiestandard.",
+     "markierungen": []
+    },
+    "pruefung": {
+     "text": "hinweis: Befund hinweis.",
+     "markierungen": []
+    }
+   },
+   "freigabe": {
+    "aktion": "annehmen",
+    "aenderungen": null,
+    "kommentar": null,
+    "herleitungen": {
+     "regel_eg": {
+      "basis": "regel_eg",
+      "schritte": [
+       {
+        "art": "basis",
+        "name": "Basis",
+        "wert": {
+         "wert": 16.962457337883958,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "Ø flächengewichtet Regelgeschoss/EG-Comps: Σ Kaltmiete 9.940,00 € / Σ Wohnfläche 586,0 m² = 16,96 €/m² (n = 9)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       },
+       {
+        "art": "anpassung",
+        "name": "Energiestandard",
+        "wert": {
+         "wert": 0.3,
+         "einheit": "€/m²",
+         "herkunft": "ki",
+         "quelle_id": null,
+         "rechenweg_text": "+ 0,30 €/m² (Effizienzhaus 40 statt 55 bei den Comps)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": "Effizienzhaus 40 statt 55 bei den Comps"
+       },
+       {
+        "art": "ergebnis",
+        "name": "Ergebnis",
+        "wert": {
+         "wert": 17.26245733788396,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "16,96 + 0,30 = 17,26 €/m²",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       },
+       {
+        "art": "fortschreibung",
+        "name": "Fortschreibung bis Vermarktungsstart",
+        "wert": {
+         "wert": 17.549689137122833,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "17,26 × (1 + 2,0 %)^(10/12) = 17,55 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       }
+      ],
+      "ergebnis": {
+       "wert": 17.26245733788396,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "16,96 + 0,30 = 17,26 €/m²",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "fortgeschrieben": {
+       "wert": 17.549689137122833,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "17,26 × (1 + 2,0 %)^(10/12) = 17,55 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+       "fundstelle": "",
+       "ausschnitt": null
+      }
+     },
+     "dg": {
+      "basis": "dg",
+      "schritte": [
+       {
+        "art": "basis",
+        "name": "Basis",
+        "wert": {
+         "wert": 19.156028368794328,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "Ø flächengewichtet DG-Comps: Σ Kaltmiete 5.402,00 € / Σ Wohnfläche 282,0 m² = 19,16 €/m² (n = 3)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       },
+       {
+        "art": "ergebnis",
+        "name": "Ergebnis",
+        "wert": {
+         "wert": 19.156028368794328,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "19,16 €/m² (keine Zu- oder Abschläge)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       },
+       {
+        "art": "fortschreibung",
+        "name": "Fortschreibung bis Vermarktungsstart",
+        "wert": {
+         "wert": 19.474767490747993,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "19,16 × (1 + 2,0 %)^(10/12) = 19,47 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       }
+      ],
+      "ergebnis": {
+       "wert": 19.156028368794328,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "19,16 €/m² (keine Zu- oder Abschläge)",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "fortgeschrieben": {
+       "wert": 19.474767490747993,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "19,16 × (1 + 2,0 %)^(10/12) = 19,47 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+       "fundstelle": "",
+       "ausschnitt": null
+      }
+     }
+    }
+   },
+   "bericht": {
+    "abschnitte": {
+     "lage": "Ruhige Lage am Lindenplatz.",
+     "markt": "Median 17,66 €/m²[^1].",
+     "mietansatz": "Ansatz 17,26 €/m²[^2].",
+     "risiken": "Keine kritischen Befunde."
+    },
+    "fussnoten": [
+     {
+      "nr": 1,
+      "ids": [
+       "kennzahlen.comps.median"
+      ],
+      "herkunft": "berechnet",
+      "verweis": "Median der sortierten €/m² (15,35; 16,48; 16,50; 16,80; 17,00; 17,33; 17,99; 18,08; 18,50; 19,07; 19,11; 20,00): 17,66"
+     },
+     {
+      "nr": 2,
+      "ids": [
+       "mietansatz.regel_eg.ergebnis"
+      ],
+      "herkunft": "berechnet",
+      "verweis": "16,96 + 0,30 = 17,26 €/m²"
+     }
+    ],
+    "markierungen": [],
+    "methoden": [],
+    "korrektur": [],
+    "befunde": [
+     {
+      "pruefung": "abgleich",
+      "schweregrad": "hinweis",
+      "text": "Befund hinweis.",
+      "markierungen": []
+     }
+    ],
+    "herleitungen": {
+     "regel_eg": {
+      "basis": "regel_eg",
+      "schritte": [
+       {
+        "art": "basis",
+        "name": "Basis",
+        "wert": {
+         "wert": 16.962457337883958,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "Ø flächengewichtet Regelgeschoss/EG-Comps: Σ Kaltmiete 9.940,00 € / Σ Wohnfläche 586,0 m² = 16,96 €/m² (n = 9)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       },
+       {
+        "art": "anpassung",
+        "name": "Energiestandard",
+        "wert": {
+         "wert": 0.3,
+         "einheit": "€/m²",
+         "herkunft": "ki",
+         "quelle_id": null,
+         "rechenweg_text": "+ 0,30 €/m² (Effizienzhaus 40 statt 55 bei den Comps)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": "Effizienzhaus 40 statt 55 bei den Comps"
+       },
+       {
+        "art": "ergebnis",
+        "name": "Ergebnis",
+        "wert": {
+         "wert": 17.26245733788396,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "16,96 + 0,30 = 17,26 €/m²",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       },
+       {
+        "art": "fortschreibung",
+        "name": "Fortschreibung bis Vermarktungsstart",
+        "wert": {
+         "wert": 17.549689137122833,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "17,26 × (1 + 2,0 %)^(10/12) = 17,55 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       }
+      ],
+      "ergebnis": {
+       "wert": 17.26245733788396,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "16,96 + 0,30 = 17,26 €/m²",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "fortgeschrieben": {
+       "wert": 17.549689137122833,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "17,26 × (1 + 2,0 %)^(10/12) = 17,55 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+       "fundstelle": "",
+       "ausschnitt": null
+      }
+     },
+     "dg": {
+      "basis": "dg",
+      "schritte": [
+       {
+        "art": "basis",
+        "name": "Basis",
+        "wert": {
+         "wert": 19.156028368794328,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "Ø flächengewichtet DG-Comps: Σ Kaltmiete 5.402,00 € / Σ Wohnfläche 282,0 m² = 19,16 €/m² (n = 3)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       },
+       {
+        "art": "ergebnis",
+        "name": "Ergebnis",
+        "wert": {
+         "wert": 19.156028368794328,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "19,16 €/m² (keine Zu- oder Abschläge)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       },
+       {
+        "art": "fortschreibung",
+        "name": "Fortschreibung bis Vermarktungsstart",
+        "wert": {
+         "wert": 19.474767490747993,
+         "einheit": "€/m²",
+         "herkunft": "berechnet",
+         "quelle_id": null,
+         "rechenweg_text": "19,16 × (1 + 2,0 %)^(10/12) = 19,47 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+         "fundstelle": "",
+         "ausschnitt": null
+        },
+        "begruendung": ""
+       }
+      ],
+      "ergebnis": {
+       "wert": 19.156028368794328,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "19,16 €/m² (keine Zu- oder Abschläge)",
+       "fundstelle": "",
+       "ausschnitt": null
+      },
+      "fortgeschrieben": {
+       "wert": 19.474767490747993,
+       "einheit": "€/m²",
+       "herkunft": "berechnet",
+       "quelle_id": null,
+       "rechenweg_text": "19,16 × (1 + 2,0 %)^(10/12) = 19,47 €/m² (Stichtag 04.11.2026 bis Vermarktungsstart 01.09.2027, 10 Monate)",
+       "fundstelle": "",
+       "ausschnitt": null
+      }
+     }
+    }
+   }
+  }
+ ]
+}

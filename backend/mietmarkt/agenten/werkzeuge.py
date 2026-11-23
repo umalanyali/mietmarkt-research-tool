@@ -33,6 +33,8 @@ def _json(daten: object) -> str:
 
 HINWEIS_PORTALDATEN = ("Importierte Portal-Daten wurden nicht an das Modell gegeben (Lizenzschutz). Freigabe: "
                        "KI_PORTALDATEN_SENDEN=true in .env. Sage dem Nutzer, dass das Ergebnis ohne sie entstanden ist.")
+HINWEIS_DOKUMENTE = ("Hochgeladene Unterlagen ohne KI-Freigabe wurden nicht durchsucht. Freigabe: beim Hochladen das "
+                     "Häkchen „KI darf lesen“ setzen. Sage dem Nutzer, dass das Ergebnis ohne sie entstanden ist.")
 
 
 def fortschreibung(p: Projekt, k: Konfig) -> tuple:
@@ -41,14 +43,15 @@ def fortschreibung(p: Projekt, k: Konfig) -> tuple:
     return p.stichtag, p.vermarktungsstart, k.mietwachstum_pa if p.mietwachstum_pa is None else p.mietwachstum_pa
 
 
-def freigegebene_dokumente(s: Session, p: Projekt, k: Konfig) -> tuple[list[Dokument], int]:
-    """Unterlagen, die das Modell sehen darf. Eingabe: Sitzung, Projekt, Konfig.
+def freigegebene_dokumente(s: Session, p: Projekt) -> tuple[list[Dokument], int]:
+    """Unterlagen, die das Modell sehen darf. Eingabe: Sitzung, Projekt.
 
-    Ausgabe: (Dokumente, Anzahl zurückgehalten). Erlaubt: beim Hochladen freigegeben, Demo-Projekt oder
-    KI_PORTALDATEN_SENDEN=true – hochgeladene Unterlagen können Portal-Inhalte sein (z. B. Exposés).
+    Ausgabe: (Dokumente, Anzahl zurückgehalten). Erlaubt ist nur, was beim Hochladen freigegeben wurde – auch im
+    Demo-Projekt und bei KI_PORTALDATEN_SENDEN=true, denn der Nutzer lädt dort echte Unterlagen hoch, und die
+    Oberfläche verspricht: ohne Häkchen bleibt das Dokument lokal.
     """
     alle = list(s.exec(select(Dokument).where(Dokument.projekt_id == p.id).order_by(Dokument.id)))
-    erlaubt = [d for d in alle if d.ki_freigabe or p.demo or k.ki_portaldaten_senden]
+    erlaubt = [d for d in alle if d.ki_freigabe]
     return erlaubt, len(alle) - len(erlaubt)
 
 
@@ -152,9 +155,11 @@ def werkzeuge(e: Engine, k: Konfig) -> dict[str, list[BaseTool]]:
         Liefert Treffer mit Datei, Seite und Textausschnitt. Jede Aussage daraus belegst du mit [Quelle: Datei, S. X]."""
         with Session(e) as s:
             p = s.get(Projekt, projekt_id)
-            erlaubt, ohne = freigegebene_dokumente(s, p, k)
+            erlaubt, ohne = freigegebene_dokumente(s, p)
             treffer = suchen(s, p.id, frage, {d.id for d in erlaubt})
-        return _json(mit_hinweis({"treffer": treffer}, dokumente=ohne))
+        # Eigener Hinweis: für Unterlagen gilt nur das Häkchen beim Hochladen, nicht KI_PORTALDATEN_SENDEN
+        return _json({"treffer": treffer} | ({"zurueckgehalten": {"dokumente": ohne}, "hinweis": HINWEIS_DOKUMENTE}
+                                             if ohne else {}))
 
     @tool
     def comps_pruefen(projekt_id: ProjektId) -> str:

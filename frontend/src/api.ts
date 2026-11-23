@@ -11,6 +11,8 @@ export interface Wert {
   herkunft: Herkunft;
   quelle_id: number | null;
   rechenweg_text: string;
+  fundstelle?: string; // Stelle in einer Unterlage, z. B. „S. 2“
+  ausschnitt?: number[] | null; // bei Werten aus Bildern: [x, y, Breite, Höhe] in Pixeln
 }
 
 export interface Projekt {
@@ -117,6 +119,22 @@ export interface Umfeld {
   attribution: string;
 }
 
+/** Ein Agenten-Lauf in der Laufliste; „offen“ = pausiert oder unterbrochen, lässt sich fortsetzen. */
+export interface LaufInfo {
+  id: string;
+  gestartet_am: string;
+  status: "fertig" | "abgebrochen" | "offen";
+}
+
+export interface DokumentAus {
+  id: number;
+  dateiname: string;
+  art: string;
+  seiten: number;
+  abschnitte: number;
+  ki_freigabe: boolean;
+}
+
 /** Fehler einer API-Antwort mit HTTP-Status (503 = externer Dienst nicht erreichbar). */
 export class ApiFehler extends Error {
   constructor(
@@ -139,6 +157,22 @@ async function json<T>(antwort: Response): Promise<T> {
 /** Legt ein Projekt aus einem gewählten Vorschlag an. Eingabe: Vorschlag. Ausgabe: Projekt (oder ApiFehler). */
 export async function projektAnlegen(v: Vorschlag): Promise<Projekt> {
   return json<Projekt>(await fetch("/api/projekte", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(v) }));
+}
+
+/**
+ * Lädt eine eigene Unterlage hoch. Eingabe: Projekt-ID, Datei, ob die KI sie lesen darf. Ausgabe: Dokument
+ * (oder ApiFehler mit dem Grund aus dem Backend, z. B. zu groß oder falscher Dateityp).
+ */
+export async function dokumentHochladen(projektId: number, datei: File, kiFreigabe: boolean): Promise<DokumentAus> {
+  const form = new FormData();
+  form.append("datei", datei);
+  form.append("ki_freigabe", String(kiFreigabe));
+  const antwort = await fetch(`/api/projekte/${projektId}/dokumente`, { method: "POST", body: form });
+  if (!antwort.ok) {
+    const detail = await antwort.json().then((j) => j.detail).catch(() => null);
+    throw new ApiFehler(typeof detail === "string" ? detail : `Server antwortet mit ${antwort.status}`, antwort.status);
+  }
+  return (await antwort.json()) as DokumentAus;
 }
 
 /** Adressvorschläge. Eingabe: Suchtext, Abbruchsignal. Ausgabe: Vorschläge mit Quellenhinweis (oder ApiFehler). */

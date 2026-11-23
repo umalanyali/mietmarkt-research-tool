@@ -213,8 +213,8 @@ echten Adressen.
   OpenStreetMap – auch Kennzahlen und Mietansatz werden dann nur daraus berechnet, und das Werkzeug meldet dem
   Agenten, wie viele Einträge zurückgehalten wurden. Freigabe auf eigene Verantwortung: `KI_PORTALDATEN_SENDEN=true`.
 - **Hochgeladene Unterlagen gehen nur mit Freigabe an Anthropic.** Sie können Portal-Inhalte sein (z. B.
-  Exposés). Ohne das Häkchen `ki_freigabe` beim Hochladen (und ohne `KI_PORTALDATEN_SENDEN=true`) werden sie nur
-  lokal gespeichert und indexiert; die Agenten sehen sie nicht, sondern nur, wie viele zurückgehalten wurden. Mit
+  Exposés). Ohne das Häkchen `ki_freigabe` beim Hochladen werden sie nur lokal gespeichert und indexiert – auch
+  im Demo-Projekt und bei `KI_PORTALDATEN_SENDEN=true` (die Einstellung betrifft nur importierte Marktdaten); die Agenten sehen sie nicht, sondern nur, wie viele zurückgehalten wurden. Mit
   Freigabe gehen bei einem Lauf Suchtreffer (Textausschnitte), der Text von Exposés mit leeren Feldern (an das
   schnelle Modell) und die Bilder selbst (an das starke Modell) an Anthropic.
 

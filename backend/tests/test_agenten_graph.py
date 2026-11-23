@@ -547,11 +547,6 @@ def unterlagen(db, freigabe: bool = True) -> None:
             s.add(d)
             s.commit()
             indexieren(s, d, text)
-        if not freigabe:  # ein Demo-Projekt gibt alles frei; ohne Freigabe muss es ein „echtes“ Projekt sein
-            p = s.get(Projekt, 1)
-            p.demo = False
-            s.add(p)
-            s.commit()
 
 
 @respx.mock
@@ -588,13 +583,22 @@ def test_lauf_mit_unterlagen_expose_vision_und_fundstellen(db):
 
 
 def test_unterlagen_ohne_freigabe_bleiben_lokal(db):
-    """Ohne KI-Freigabe sieht das Modell die Unterlagen nicht: keine Suchtreffer, nur der Hinweis, und der
-    Supervisor muss weder Exposé- noch Vision-Agent einbinden."""
+    """Ohne KI-Freigabe sieht das Modell die Unterlagen nicht – auch im Demo-Projekt (Projekt 1): keine Suchtreffer,
+    nur der Hinweis, und der Supervisor muss weder Exposé- noch Vision-Agent einbinden."""
     unterlagen(db, freigabe=False)
     w = next(t for t in werkzeuge(db, KONFIG)["standort"] if t.name == "dokumente_suchen")
     aus = json.loads(w.invoke({"projekt_id": 1, "frage": "Balkon"}))
     assert aus["treffer"] == [] and aus["zurueckgehalten"] == {"dokumente": 2}
+    assert "Häkchen" in aus["hinweis"] and "KI_PORTALDATEN_SENDEN" not in aus["hinweis"]
     m = modelle(stark=[entscheidung("vision"), entscheidung("fertig", rueckfrage="Unterlagen freigeben?")],
                 schnell=[ki("Standort.")])
     z = laufen(graph(m, db), startzustand(1))
     assert z["entscheidungen"][0]["naechster"] == "standort" and "keine Unterlagen" in z["entscheidungen"][0]["begruendung"]
+
+
+def test_portaldaten_freigabe_gibt_keine_unterlagen_frei(db):
+    """KI_PORTALDATEN_SENDEN gilt für importierte Marktdaten, nicht für Unterlagen: dort zählt nur das Häkchen."""
+    unterlagen(db, freigabe=False)
+    k = Konfig(_env_file=None, anthropic_api_key="test", ki_portaldaten_senden=True)
+    w = next(t for t in werkzeuge(db, k)["standort"] if t.name == "dokumente_suchen")
+    assert json.loads(w.invoke({"projekt_id": 1, "frage": "Balkon"}))["treffer"] == []

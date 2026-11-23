@@ -414,7 +414,7 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
         with Session(e) as s:
             p = s.get(Projekt, z["projekt_id"])
             wohnungen = list(s.exec(select(Wohnung).where(Wohnung.projekt_id == p.id).order_by(Wohnung.id)))
-            dokumente, zurueck = freigegebene_dokumente(s, p, k)
+            dokumente, zurueck = freigegebene_dokumente(s, p)
         return p, wohnungen, dokumente, _projektdaten(p, wohnungen, fortschreibung(p, k)[2], dokumente, zurueck)
 
     def dokument_agenten(dokumente: list[Dokument]) -> tuple[str, ...]:

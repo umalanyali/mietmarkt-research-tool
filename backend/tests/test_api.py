@@ -67,3 +67,15 @@ def test_projekt_ohne_eigene_kennzahlen_sieht_nur_comps_im_umkreis(client):
     assert k["kennzahlen"] == []
     comps = client.get("/api/projekte/2/comps").json()
     assert len(comps) < 12 and all(c["entfernung_km"]["wert"] <= 2 for c in comps)
+
+
+@pytest.mark.parametrize(("origin", "erwartet"), [
+    ("https://angreifer.example", 403), ("null", 403),  # fremde Website bzw. Sandbox-iframe/Datei
+    ("http://localhost:5173", 404), ("http://127.0.0.1:8000", 404), (None, 404),  # eigene Oberfläche, curl, Tests
+])
+def test_post_nur_von_eigener_herkunft(client, origin, erwartet):
+    """CSRF-Schutz: Schreibende Anfragen mit fremdem Origin weist die API ab, bevor ein Endpunkt läuft (sonst könnte
+    jede Website z. B. ein Dokument mit KI-Freigabe hochladen). 404: Anfrage kam durch, Projekt 999 gibt es nicht."""
+    kopf = {"Origin": origin} if origin else {}
+    assert client.post("/api/projekte/999/laeufe", headers=kopf).status_code == erwartet
+    assert client.get("/api/projekte", headers=kopf).status_code == 200  # Lesen bleibt erlaubt (Antwort sperrt CORS)

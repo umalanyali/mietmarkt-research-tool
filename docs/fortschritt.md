@@ -131,3 +131,54 @@
 - Entschieden (22.11.2026): `ki_freigabe` bleibt standardmäßig aus.
 - Offen: Upload und Dokumentliste im Frontend – das Häkchen `ki_freigabe` sichtbar beim Upload, mit dem Hinweis, dass das Dokument dann bei einem Lauf an Anthropic geht; Liste/Löschen von Dokumenten per API; Exposé-Werte als Comps
   übernehmen (nur über Freigabe); Live-Lauf mit OSRM/Haversine, sobald overpass-api.de wieder erreichbar ist.
+
+## Nachtrag 23.11.2026 – Overpass-Ausfall, Umfeld-Cache, Live-Läufe
+- Exposé- und Vision-Agent einmal echt mit Claude gelaufen (synthetisches Exposé + Bildtabelle, nur die beiden Knoten):
+  Baujahr vom Modell ergänzt (Herkunft ki, Zitat geprüft), drei Tabellenwerte abgelesen (Ausschnitte auf ±2 px genau),
+  Kosten 0,0069 € (Haiku 0,0002 €, Sonnet 0,0066 €).
+- Jahreszahlen ohne Tausenderpunkt (`OHNE_TAUSENDER` in `agenten/bericht.py`, Einheit „Jahr“).
+- Overpass: Server-Liste `OVERPASS_URLS` (Standard nur overpass-api.de; Ersatzserver nur auf Wunsch in `.env`),
+  Timeout 25 s je Server, Rechenzeit 20 s, Fußnote nennt Server und Abrufdatum. Umfeld je Projekt 30 Tage in
+  `umfeldcache` (Koordinaten müssen passen, Ausfälle werden nicht gespeichert); API und Werkzeug `umfeld` nutzen ihn.
+- Tests: Backend 215 (+1 Live-Test).
+- **Verschoben:** Live-Test mit Umfeld (`pytest -m live -s`, Abschnitte Lage, Risiken, Methoden ansehen) und das
+  einmalige Befüllen von `umfeldcache` für das Demo-Projekt. overpass-api.de war am 23.11.2026 überlastet (502 und
+  Zeitüberschreitungen von 10:50 bis 11:36, nur eine kurze Antwort um 11:22). Befüllen später mit
+  `umfeld_fuer_projekt` für die Demo-Projekte bzw. einem Aufruf von `GET /api/projekte/1/umfeld` bei laufender App.
+
+## M7 – Agenten-Elemente im Frontend (23.11.2026)
+- Zeitleiste liest den SSE-Strom (`frontend/src/lauf.ts`: `sseLesen` über fetch, weil Freigabe/Antwort POST-Ströme sind;
+  reine Funktion `verarbeite` plus Hook `useLauf`): Status je Agent (arbeitet, fertig, Rückfrage, wartet, Fehler),
+  Werkzeugaufrufe mit Argumenten und Ergebnis aufklappbar, Dauer (Browser-Uhr), Token, Kosten in €, Text tokenweise.
+- Freigabe-Karte aus dem Interrupt: Vorschlag je Basis, Begründung, Herleitungskette; Annehmen / Ändern (Basiswert und
+  Beträge der Zu-/Abschläge) / Ablehnen (nur mit Kommentar). Rückfragen mit Antwortfeld in der Agentenleiste.
+- Herkunfts-Kennzeichen (`komponenten/Herkunft.tsx`): Klick zeigt Quelle, Rechenweg bzw. Fundstelle und Bildausschnitt;
+  an Herleitung, Mietansatz, KPIs und Comps-Zusammenfassung. Tabellenzellen behalten den title-Tooltip.
+- Laufliste je Projekt: `GET /api/projekte/{id}/laeufe` (Status fertig, abgebrochen, offen); „Fortsetzen“ öffnet
+  pausierte oder unterbrochene Läufe am Checkpoint.
+- Hinweisleiste „KI nicht konfiguriert“ (aus `/api/gesundheit`), Startknopf dann gesperrt.
+- Upload eigener Unterlagen mit Häkchen „KI darf lesen“ (Standard aus, Hinweis: geht bei einem Lauf an Anthropic).
+- `agentenDaten.ts` und der Platzhalter „Comp 6 ausschließen“ entfernt; Mietansatz-Karte zeigt den echten Vorschlag bzw.
+  die Freigabe, sonst einen Leerzustand.
+- Farben nur noch in `frontend/src/stil/tokens.css` (`:root`); `farben.test.ts` verbietet Farbwerte in anderen CSS-
+  und Komponentendateien (Ausnahme `kartenstil.ts`, MapLibre kennt keine CSS-Variablen).
+- Tests: Backend 216, Frontend 24 (Stream-Verarbeitung mit aufgezeichneten Ereignissen `src/test/aufzeichnung.json`,
+  Freigabe-Karte, Herkunfts-Kennzeichen). Playwright-Skript `node skripte/lauf.mjs [ordner]`: startet
+  `backend/tests/fake_server.py` (nur mit `KI_FAKE=1`) auf Port 8010 und Vite auf 5180 (`API_PORT`), kompletter Lauf
+  bis zum freigegebenen Mietansatz. Fortsetzen nach Neuladen einmal im Browser (Playwright-MCP) geprüft.
+- Review `python-reviewer`: ohne wesentlichen Befund; ergänzt: Test für Status „abgebrochen“ in der Laufliste, der
+  Fake-Server räumt seinen Temp-Ordner auf (SIGTERM-Handler, weil uvicorn das Signal nach dem Herunterfahren erneut auslöst).
+- Review `security-reviewer`, beide Befunde behoben:
+  - **S6** Unterlagen gingen im Demo-Projekt und bei `KI_PORTALDATEN_SENDEN=true` auch ohne Häkchen an Anthropic,
+    obwohl die Oberfläche „bleibt lokal“ sagt. Jetzt zählt für Unterlagen nur `ki_freigabe`; eigener Hinweis an das
+    Modell (`HINWEIS_DOKUMENTE`), README angepasst. Entschieden 23.11.2026.
+  - **S7** CSRF: Fremde Websites konnten POST-Anfragen an 127.0.0.1:8000 schicken (z. B. Upload mit KI-Freigabe).
+    ASGI-Middleware `EigeneHerkunft` weist schreibende Anfragen mit fremdem `Origin` (auch „null“) mit 403 ab.
+- Tests danach: Backend 222, Frontend 24.
+- Offen:
+  - **Zeitleiste beim Fortsetzen:** Das Backend speichert die Ereignisse nicht; ein fortgesetzter Lauf zeigt nur die
+    Schritte ab dem Fortsetzen (beim Endstand ergänzt aus `ergebnisse`). Token zählen dann nur ab dort, die Kosten in €
+    stimmen am Ende wieder (aus „fertig“). Abhilfe: Ereignisse je Lauf speichern oder aus dem Checkpoint rekonstruieren.
+  - **Dokumentliste:** Upload zeigt nur das Ergebnis der letzten Datei; Liste und Löschen fehlen (API und Frontend),
+    ebenso das nachträgliche Ändern von `ki_freigabe`.
+  - Neue Anpassungen lassen sich beim Ändern nicht hinzufügen oder entfernen, nur Beträge und Basiswert ändern.

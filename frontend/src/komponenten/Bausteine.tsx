@@ -6,7 +6,8 @@ import { useState } from "react";
 import { de, ganz } from "../format";
 import type { Comp, Marktkennzahl, Wert } from "../api";
 import { SternSymbol } from "./Symbole";
-import { freigabe, herleitung, mietansatzErgebnis, type AgentSchritt } from "../daten/agentenDaten";
+import type { AgentStatus, Freigabe, Herleitungen } from "../lauf";
+import { HerkunftMarke } from "./Herkunft";
 
 // ------------------------------------------------------------------ Stern
 
@@ -36,14 +37,13 @@ interface CompsProps {
   onStern: (nr: number) => void;
   ausgewaehlt: number | null;
   onAuswahl: (nr: number) => void;
-  ausgeschlossen?: Set<number>;
 }
 
 /**
- * Tabelle der Vergleichsangebote. Eingabe: Comps, gemerkte und vorgeschlagen ausgeschlossene Nummern, Auswahl-Handler.
+ * Tabelle der Vergleichsangebote. Eingabe: Comps, gemerkte Nummern, Auswahl-Handler.
  * Ausgabe: Tabelle; Klick oder Enter auf eine Zeile wählt den Comp (hebt ihn auf der Karte hervor).
  */
-export function CompsTabelle({ comps, gemerkt, onStern, ausgewaehlt, onAuswahl, ausgeschlossen }: CompsProps) {
+export function CompsTabelle({ comps, gemerkt, onStern, ausgewaehlt, onAuswahl }: CompsProps) {
   return (
     <div className="e-tabelle-rahmen">
       <table className="e-tabelle e-comps">
@@ -67,11 +67,10 @@ export function CompsTabelle({ comps, gemerkt, onStern, ausgewaehlt, onAuswahl, 
         </thead>
         <tbody>
           {comps.map((c) => {
-            const raus = ausgeschlossen?.has(c.nr);
             return (
               <tr
                 key={c.nr}
-                className={[ausgewaehlt === c.nr ? "aktiv" : "", raus ? "raus" : "", gemerkt.has(c.nr) ? "gemerkt" : ""].join(" ")}
+                className={[ausgewaehlt === c.nr ? "aktiv" : "", gemerkt.has(c.nr) ? "gemerkt" : ""].join(" ")}
                 onClick={() => onAuswahl(c.nr)}
                 tabIndex={0}
                 onKeyDown={(e) => e.key === "Enter" && onAuswahl(c.nr)}
@@ -81,7 +80,6 @@ export function CompsTabelle({ comps, gemerkt, onStern, ausgewaehlt, onAuswahl, 
                 <td className="e-objekt">
                   {c.objekt}
                   <span className="e-unter">{c.anbieter}</span>
-                  {raus && <span className="e-vorschlag">Ausschluss vorgeschlagen</span>}
                 </td>
                 <td>{c.typ}</td>
                 <td className="z">{c.zimmer}</td>
@@ -162,90 +160,109 @@ export function herkunftText(w: Pick<Wert, "herkunft" | "rechenweg_text">): stri
 
 // ------------------------------------------------------------------ Freigabe (Interrupt)
 
-export type Entscheidung = "offen" | "angenommen" | "geaendert" | "abgelehnt";
+const BASIS_TEXT = { regel_eg: "Regelgeschoss/EG", dg: "Dachgeschoss" } as const;
+
+/** Betrag mit Vorzeichen. Eingabe: Zahl. Ausgabe: z. B. „+0,30“. */
+const mitVorzeichen = (w: number | null) => `${w !== null && w > 0 ? "+" : ""}${de(w)}`;
 
 /**
- * Freigabe-Karte an einem Interrupt-Punkt des Agenten-Workflows: Vorschlag, Begründung, Belege, Entscheidung.
- * Ab M6 setzt die Entscheidung den pausierten LangGraph-Lauf fort; im Prototyp ändert sie nur die Anzeige.
- * Eingabe: optionaler Verweis (Link zur betroffenen Tabelle). Ausgabe: Karte mit Annehmen / Ändern / Ablehnen.
+ * Freigabe-Karte am Interrupt des Laufs: Vorschlag je Basis, Begründung, Herleitungskette, Annehmen / Ändern /
+ * Ablehnen mit Kommentar. Eingabe: Vorschlag aus „wartet_auf_freigabe“, Absenden-Handler, ob gerade gesendet wird.
+ * Ausgabe: Karte. Ablehnen braucht einen Kommentar (das Backend verlangt ihn, damit der Agent weiß, was anders soll).
  */
-export function FreigabeKarte({ verweis }: { verweis?: { href: string; text: string } }) {
-  const [entscheidung, setEntscheidung] = useState<Entscheidung>("offen");
+export function FreigabeKarte({ vorschlag, onSenden, sendet }: { vorschlag: { herleitungen: Herleitungen; begruendung: string }; onSenden: (f: Freigabe) => void; sendet: boolean }) {
+  const basen = Object.keys(vorschlag.herleitungen) as (keyof Herleitungen)[];
   const [aendern, setAendern] = useState(false);
   const [kommentar, setKommentar] = useState("");
+  // Eingaben je Basis: Basiswert und Beträge der vorgeschlagenen Zu-/Abschläge, als Text (Komma erlaubt)
+  const [eingaben, setEingaben] = useState(() =>
+    Object.fromEntries(basen.map((b) => {
+      const schritte = vorschlag.herleitungen[b]!.schritte;
+      return [b, schritte.filter((x) => x.art === "basis" || x.art === "anpassung").map((x) => de(x.wert.wert))];
+    })) as Record<string, string[]>,
+  );
+  const text = kommentar.trim() || undefined;
 
-  /** Hält die Entscheidung fest und schließt das Änderungsformular. Eingabe: Entscheidung. Ausgabe: keine. */
-  function setze(e: Entscheidung) {
-    setEntscheidung(e);
-    setAendern(false);
+  /** Baut die Änderungen: nur Basen, an denen sich etwas geändert hat. Ausgabe: aenderungen oder undefined. */
+  function aenderungen(): Freigabe["aenderungen"] {
+    const aus: NonNullable<Freigabe["aenderungen"]> = {};
+    for (const b of basen) {
+      const h = vorschlag.herleitungen[b]!;
+      const [basis, ...betraege] = eingaben[b].map((t) => Number(t.replace(/\./g, "").replace(",", ".")));
+      const anp = h.schritte.filter((x) => x.art === "anpassung");
+      const e: { basiswert?: number; anpassungen?: { name: string; betrag: number; begruendung: string }[] } = {};
+      if (eingaben[b][0] !== de(h.schritte[0].wert.wert)) e.basiswert = basis;
+      if (anp.some((x, i) => eingaben[b][i + 1] !== de(x.wert.wert))) {
+        e.anpassungen = anp.map((x, i) => ({ name: x.name, betrag: betraege[i], begruendung: x.begruendung }));
+      }
+      if (Object.keys(e).length) aus[b] = e;
+    }
+    return Object.keys(aus).length ? aus : undefined;
   }
-
-  if (entscheidung !== "offen") {
-    const text = {
-      angenommen: "Angenommen. Der Mietansatz-Agent arbeitet mit 11 Comps weiter.",
-      geaendert: "Mit deinen Änderungen übernommen. Die Änderung ist als Nutzerkorrektur gespeichert.",
-      abgelehnt: "Abgelehnt. Der Exposé-Agent prüft die Auswahl erneut mit deinem Kommentar.",
-    }[entscheidung];
-    return (
-      <section className="e-freigabe e-freigabe-erledigt" aria-live="polite">
-        <p className="e-freigabe-kopf">{freigabe.titel}</p>
-        <p>{text}</p>
-        <button type="button" className="e-link" onClick={() => setEntscheidung("offen")}>
-          Rückgängig
-        </button>
-      </section>
-    );
-  }
+  const geaendert = aendern ? aenderungen() : undefined;
 
   return (
     <section className="e-freigabe" aria-labelledby="freigabe-titel">
       <p className="e-freigabe-kopf">Freigabe erforderlich</p>
       <h3 id="freigabe-titel" className="e-freigabe-frage">
-        {freigabe.frage}
+        Mietansatz übernehmen?
       </h3>
       <dl className="e-freigabe-vorschlag">
-        {freigabe.vorschlag.map((v) => (
-          <div key={v.text}>
-            <dt>{v.text}</dt>
-            <dd>{v.wert}</dd>
-          </div>
-        ))}
+        {basen.map((b) => {
+          const h = vorschlag.herleitungen[b]!;
+          return (
+            <div key={b}>
+              <dt>{BASIS_TEXT[b]}</dt>
+              <dd>
+                {de(h.ergebnis.wert)} €/m² <HerkunftMarke wert={h.ergebnis} />
+                {h.fortgeschrieben && <> · bei Vermarktung {de(h.fortgeschrieben.wert)} €/m² <HerkunftMarke wert={h.fortgeschrieben} /></>}
+              </dd>
+            </div>
+          );
+        })}
       </dl>
-      <p className="e-freigabe-grund">{freigabe.begruendung}</p>
-      {verweis && (
-        <p className="e-verweis">
-          <a href={verweis.href}>{verweis.text}</a>
-        </p>
-      )}
-      <ul className="e-belege" aria-label="Belege">
-        {freigabe.belege.map((b) => (
-          <li key={b.quelle}>
-            <button type="button" className="e-beleg">
-              {b.quelle}
-            </button>{" "}
-            <span className="e-leise">{b.fundstelle}</span>
-          </li>
-        ))}
-      </ul>
+      <p className="e-freigabe-grund">{vorschlag.begruendung}</p>
+      <Herleitung herleitungen={vorschlag.herleitungen} />
       {aendern && (
         <div className="e-freigabe-aendern">
-          <label>
-            <input type="checkbox" defaultChecked={false} /> Comp 6 trotzdem übernehmen
-          </label>
-          <label className="e-freigabe-kommentar">
-            Kommentar für den Agenten
-            <textarea rows={2} value={kommentar} onChange={(e) => setKommentar(e.target.value)} />
-          </label>
+          {basen.map((b) => {
+            const glieder = vorschlag.herleitungen[b]!.schritte.filter((x) => x.art === "basis" || x.art === "anpassung");
+            return (
+              <fieldset key={b}>
+                <legend>{BASIS_TEXT[b]} (€/m²)</legend>
+                {glieder.map((g, i) => (
+                  <label key={i}>
+                    {g.art === "basis" ? "Basiswert" : g.name}
+                    <input
+                      inputMode="decimal"
+                      value={eingaben[b][i]}
+                      onChange={(e) => setEingaben((alt) => ({ ...alt, [b]: alt[b].map((t, j) => (j === i ? e.target.value : t)) }))}
+                    />
+                  </label>
+                ))}
+              </fieldset>
+            );
+          })}
         </div>
       )}
+      <label className="e-freigabe-kommentar">
+        Kommentar für den Agenten {!aendern && <span className="e-leise">(nötig zum Ablehnen)</span>}
+        <textarea rows={2} maxLength={2000} value={kommentar} onChange={(e) => setKommentar(e.target.value)} />
+      </label>
       <div className="e-freigabe-aktionen">
-        <button type="button" className="e-knopf e-knopf-primaer" onClick={() => setze(aendern ? "geaendert" : "angenommen")}>
-          {aendern ? "Änderung übernehmen" : "Annehmen"}
-        </button>
-        <button type="button" className="e-knopf" onClick={() => setAendern((a) => !a)} aria-expanded={aendern}>
+        {aendern ? (
+          <button type="button" className="e-knopf e-knopf-primaer" disabled={sendet || !geaendert} onClick={() => onSenden({ aktion: "aendern", aenderungen: geaendert, kommentar: text })}>
+            Änderung übernehmen
+          </button>
+        ) : (
+          <button type="button" className="e-knopf e-knopf-primaer" disabled={sendet} onClick={() => onSenden({ aktion: "annehmen", kommentar: text })}>
+            Annehmen
+          </button>
+        )}
+        <button type="button" className="e-knopf" disabled={sendet} onClick={() => setAendern((a) => !a)} aria-expanded={aendern}>
           {aendern ? "Abbrechen" : "Ändern"}
         </button>
-        <button type="button" className="e-knopf e-knopf-still" onClick={() => setze("abgelehnt")}>
+        <button type="button" className="e-knopf e-knopf-still" disabled={sendet || !text} onClick={() => onSenden({ aktion: "ablehnen", kommentar: text })}>
           Ablehnen
         </button>
       </div>
@@ -256,54 +273,27 @@ export function FreigabeKarte({ verweis }: { verweis?: { href: string; text: str
 // ------------------------------------------------------------------ Herleitungskette
 
 /**
- * Mietansatz als Kette Beleg → Annahme → Zahl; ein Klick auf einen Schritt zeigt Quelle und Rechenwerkzeug.
- * Eingabe: keine (Beispieldaten). Ausgabe: Liste mit Summenzeile.
+ * Mietansatz als Kette Basis → Zu-/Abschläge → Ergebnis (→ Fortschreibung), je Basis; jede Zahl mit Herkunft.
+ * Eingabe: Herleitungen aus dem Lauf. Ausgabe: Listen je Basis.
  */
-export function Herleitung() {
-  const [offen, setOffen] = useState<string | null>(null);
+export function Herleitung({ herleitungen }: { herleitungen: Herleitungen }) {
   return (
     <div className="e-kette">
-      <ol className="e-kette-liste">
-        {herleitung.map((s) => {
-          const zahl = s.glieder.find((g) => g.art === "zahl");
-          const beleg = s.glieder.find((g) => g.art === "beleg");
-          const annahme = s.glieder.find((g) => g.art === "annahme");
-          return (
-            <li key={s.schritt} className="e-kette-schritt">
-              <button
-                type="button"
-                className="e-kette-zeile"
-                aria-expanded={offen === s.schritt}
-                onClick={() => setOffen(offen === s.schritt ? null : s.schritt)}
-              >
-                <span className="e-kette-name">{s.schritt}</span>
-                <span className="e-kette-beleg">{beleg?.text}</span>
-                <span className="e-kette-pfeil" aria-hidden="true">→</span>
-                <span className="e-kette-annahme">{annahme?.text}</span>
-                <span className="e-kette-pfeil" aria-hidden="true">→</span>
-                <span className="e-kette-zahl">{zahl?.wert}</span>
-              </button>
-              {offen === s.schritt && (
-                <div className="e-kette-quelle">
-                  Quelle: <button type="button" className="e-beleg">{beleg?.quelle}</button>
-                  {zahl?.quelle && (
-                    <>
-                      {" "}· Rechenwerkzeug <code>{zahl.quelle}</code>
-                    </>
-                  )}
-                </div>
-              )}
+      {(Object.keys(herleitungen) as (keyof Herleitungen)[]).map((b) => (
+        <ol key={b} className="e-kette-liste" aria-label={`Herleitung ${BASIS_TEXT[b]}`}>
+          {herleitungen[b]!.schritte.map((s, i) => (
+            <li key={i} className={`e-kette-schritt k-${s.art}`}>
+              <span className="e-kette-name">
+                {s.art === "basis" ? `Basis ${BASIS_TEXT[b]}` : s.name}
+                {s.begruendung && <span className="e-kette-beleg">{s.begruendung}</span>}
+              </span>
+              <span className="e-kette-zahl">
+                {s.art === "anpassung" ? mitVorzeichen(s.wert.wert) : de(s.wert.wert)} €/m² <HerkunftMarke wert={s.wert} />
+              </span>
             </li>
-          );
-        })}
-      </ol>
-      <div className="e-kette-summe">
-        <span>Saldo Zu-/Abschläge {mietansatzErgebnis.saldo}</span>
-        <span>vor Rundung {mietansatzErgebnis.vorRundung}</span>
-      </div>
-      <p className="e-leise e-kette-status">
-        {mietansatzErgebnis.status} · gerundet {mietansatzErgebnis.rundung} · jede Zahl aus einem Rechenwerkzeug
-      </p>
+          ))}
+        </ol>
+      ))}
     </div>
   );
 }
@@ -352,7 +342,7 @@ export function LadeZeilen({ zeilen = 4 }: { zeilen?: number }) {
 // ------------------------------------------------------------------ Hilfen
 
 /** Agentenstatus als Text. Eingabe: Status. Ausgabe: z. B. „wartet auf dich“. */
-export function statusText(s: AgentSchritt["status"]): string {
+export function statusText(s: AgentStatus): string {
   return { fertig: "fertig", arbeitet: "arbeitet", rueckfrage: "wartet auf dich", wartet: "wartet", fehler: "Fehler" }[s];
 }
 
