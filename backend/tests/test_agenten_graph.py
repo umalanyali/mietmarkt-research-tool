@@ -609,3 +609,13 @@ def test_validierung_ohne_ergebnis_gibt_keine_ereignisse():
     """Schickt die Validierung den Mietansatz-Agenten zurück (fehlende DG-Herleitung), hat ihr Update keine
     „ergebnisse“; die Übersetzung in Ereignisse darf daran nicht scheitern (Fund aus dem echten Demo-Lauf)."""
     assert ereignisse("updates", {"validierung": {"nachrichten": [HumanMessage("Leitplanke: Es fehlt dg")]}}) == []
+
+
+def test_dienstbefunde_je_dienst_zusammengefasst():
+    """Ruft ein Agent ein ausgefallenes Werkzeug mehrmals auf (oder zwei Agenten dasselbe), entsteht je Dienst ein
+    Befund, nicht einer je Aufruf (im Testlauf stand „Umfeld nicht verfügbar“ doppelt)."""
+    from mietmarkt.agenten.graph import dienst_befunde
+    weg = {"name": "umfeld", "status": "success", "ergebnis": {"fehler": "overpass nicht erreichbar: 502"}}
+    luft = {"name": "umfeld", "status": "success", "ergebnis": {"pois": [{"methode_fuss": "Luftlinie"}]}}
+    befunde = dienst_befunde({"standort": {"werkzeuge": [weg, weg, luft, luft]}, "marktdaten": {"werkzeuge": [weg]}})
+    assert [(b["schweregrad"], b["text"].split()[0]) for b in befunde] == [("warnung", "Umfeld"), ("hinweis", "Routing")]

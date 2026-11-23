@@ -143,3 +143,40 @@ def test_ablesung_nur_mit_zahl_und_ausschnitt_im_bild():
     for falsch in ({"wert": "k. A.", "ausschnitt": [0, 0, 5, 5]}, {"wert": "2", "ausschnitt": [30, 0, 20, 5]},
                    {"wert": "2", "ausschnitt": [0, 0, 0, 5]}, {"wert": "2", "ausschnitt": [1, 2]}):
         assert ablesung({"bezeichnung": "x", **falsch}, (40, 20), "t.png", 3) is None
+
+
+def test_fundstellen_nur_fuer_saetze_die_wirklich_aus_treffern_stammen():
+    """Teilt ein Satz Wörter oder Zahlen mit einem Treffer, die auch in anderen Werkzeugergebnissen oder in den
+    Projektdaten stehen, stammt er nicht aus den Unterlagen (Fund aus dem Testlauf „Testquartier Südhang“)."""
+    from mietmarkt.agenten.dokumente import fundstellen_befunde
+    treffer = {"treffer": [{"datei": "beschreibung.txt", "seite": 1, "ausschnitt":
+                            "Hangweg 20, 99998 Musterstadt, Ortsteil Südhang. Vermietung bis 01.09.2027 geplant. "
+                            "Die Bushaltestelle der Linie 7 liegt rund 250 Meter entfernt."}]}
+    # Format wie das Werkzeug „lage“: getrennte Felder, die Wortfolge steht dort nie am Stück
+    lage = {"adresse": "Hangweg 20", "plz": "99998", "ort": "Musterstadt", "ortsteil": "Südhang"}
+    ergebnisse = {"standort": {"text": "Das Projekt liegt am Hangweg 20, 99998 Musterstadt, Ortsteil Südhang. "
+                                       "Mietansätze fortgeschrieben bis 01.09.2027. "
+                                       "Die Bushaltestelle der Linie 7 liegt rund 250 Meter entfernt.",
+                               "werkzeuge": [{"name": "lage", "status": "success", "ergebnis": lage},
+                                             {"name": "dokumente_suchen", "status": "success", "ergebnis": treffer}]}}
+    befunde = fundstellen_befunde(ergebnisse, projektdaten="Vermarktungsstart: 01.09.2027")
+    assert [b["text"] for b in befunde] == [
+        "Aussage aus den Unterlagen ohne Fundstelle (standort): „Die Bushaltestelle der Linie 7 liegt rund 250 Meter entfernt.“"]
+
+
+@pytest.mark.parametrize(("text", "erwartet"), [
+    ("Ausstattung: Balkon, Einbauküche", {"Balkon", "Einbauküche"}),
+    ("Eine Einbauküche ist nicht enthalten.", set()),  # Hangweg 11, S. 2
+    ("Keine Einbauküche, ohne Garten.", set()),
+    ("Kein Keller; dafür ein Balkon.", {"Balkon"}),
+    ("Beide Schlafräume liegen ruhig zur Gartenseite.", set()),  # Talblick 18: Wortteil, kein Garten
+    ("Tiefgaragenstellplatz für 90 €", {"Stellplatz"}),  # Kopf des Kompositums zählt, das Bestimmungswort nicht
+    ("Dachgarten mit Blick", {"Garten"}),
+    ("Aufzüge, Kellerabteile und Fahrradraum", {"Aufzug", "Keller"}),  # Kellerabteil/-raum ist ein Keller (Testdaten)
+    ("Stellplätze in der Tiefgarage", {"Stellplatz", "Tiefgarage"}),  # Mehrzahl zählt
+    ("Eine Einbauküche ist nur in den Dachgeschosswohnungen enthalten.", {"Einbauküche"}),  # bedingt, aber vorhanden
+])
+def test_ausstattung_mit_verneinung_und_wortgrenzen(text, erwartet):
+    """Parser: Verneinung im selben Satzteil („keine“, „ohne“, „nicht enthalten“) und ganze Wörter (Gartenseite ist
+    kein Garten). Funde aus den Testdaten (testdaten/unterlagen)."""
+    assert {a["merkmal"] for a in parsen([text], "e.pdf", 1)["ausstattung"]} == erwartet

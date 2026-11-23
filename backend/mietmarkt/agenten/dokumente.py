@@ -32,22 +32,27 @@ def ablesung(a: dict, groesse: tuple[int, int], datei: str, quelle_id: int | Non
 def _aus_dokument(satz: str, doktext: str, andere: str) -> bool:
     """Stammt ein Satz erkennbar aus den Suchtreffern? Eingabe: Satz, Text der Treffer, übrige Werkzeugergebnisse.
 
-    Ausgabe: True, wenn er vier aufeinanderfolgende Wörter mit einem Treffer teilt oder eine Zahl nennt, die nur in
-    den Treffern steht (nicht auch in Kennzahlen o. Ä.). Eine Heuristik: Umformulierungen ohne Zahl erkennt sie nicht.
+    Ausgabe: True, wenn er vier aufeinanderfolgende Wörter oder eine Zahl mit einem Treffer teilt, die nur dort
+    stehen (nicht auch in Kennzahlen, anderen Werkzeugergebnissen oder Projektdaten). Eine Heuristik: Umformulierungen ohne Zahl erkennt sie nicht.
     """
     def vierer(t: str) -> set[tuple[str, ...]]:
         """Alle Folgen von vier Wörtern. Ausgabe: Menge."""
         w = re.findall(r"\w+", t.casefold())
         return {tuple(w[i:i + 4]) for i in range(len(w) - 3)}
-    if vierer(satz) & vierer(doktext):
+    # Eine gemeinsame Wortfolge belegt die Herkunft nur, wenn sie ein inhaltliches Wort (ab 4 Buchstaben, keine Zahl)
+    # enthält, das in keiner anderen Quelle steht. Sonst ist sie aus Werkzeugergebnissen oder Projektdaten erklärbar:
+    # „99998 Musterstadt Ortsteil Südhang“ setzt sich aus den getrennten Feldern von „lage“ zusammen.
+    bekannt = set(re.findall(r"\w+", andere.casefold()))
+    if any(any(len(w) >= 4 and not w.isdigit() and w not in bekannt for w in folge)
+           for folge in vierer(satz) & vierer(doktext)):
         return True
     return any(z in doktext and z not in andere for _, z in ZAHL.findall(satz))
 
 
-def fundstellen_befunde(ergebnisse: dict) -> list[dict]:
+def fundstellen_befunde(ergebnisse: dict, projektdaten: str = "") -> list[dict]:
     """Aussagen aus Unterlagen ohne gültige Fundstelle, im Code ermittelt (Prüf-Agent).
 
-    Eingabe: Ergebnisse der Agenten. Ausgabe: Befunde (pruefung „fundstelle“, warnung) je Satz eines Agenten, der
+    Eingabe: Ergebnisse der Agenten, Projektdaten, wie die Agenten sie sehen (Adresse, Vermarktungsstart …). Ausgabe: Befunde (pruefung „fundstelle“, warnung) je Satz eines Agenten, der
     dokumente_suchen benutzt hat: Fundstelle, die in keinem seiner Treffer vorkommt, oder Aussage aus den Treffern
     ohne Fundstelle.
     """
@@ -60,8 +65,8 @@ def fundstellen_befunde(ergebnisse: dict) -> list[dict]:
             continue
         erlaubt = {(t["datei"], t["seite"]) for t in treffer}
         doktext = " ".join(t["ausschnitt"] for t in treffer)
-        andere = " ".join(json.dumps(w["ergebnis"], ensure_ascii=False) for w in r["werkzeuge"]
-                          if w["name"] != "dokumente_suchen")
+        andere = " ".join([projektdaten] + [json.dumps(w["ergebnis"], ensure_ascii=False) for w in r["werkzeuge"]
+                                            if w["name"] != "dokumente_suchen"])
         # Satzende nicht innerhalb eckiger Klammern: „[Quelle: x.pdf, S. 2]“ enthält selbst einen Punkt
         for satz in re.split(r"(?<=[.!?])\s+(?![^\[]*\])", r["text"]):
             zitate = {(d.strip(), int(n)) for d, n in QUELLE.findall(satz)}

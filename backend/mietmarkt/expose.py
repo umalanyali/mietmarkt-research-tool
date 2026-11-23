@@ -12,8 +12,18 @@ FELDER = {
     "zimmer": ("Zimmer", re.compile(r"(\d(?:,5)?)\s*-?\s*Zimmer|Zimmer(?:anzahl)?:?\s*(\d(?:,5)?)", re.IGNORECASE)),
     "baujahr": ("Jahr", re.compile(r"Baujahr:?\s*((?:19|20)\d{2})", re.IGNORECASE)),
 }
-AUSSTATTUNG = ("Balkon", "Terrasse", "Loggia", "Garten", "Aufzug", "Einbauküche", "Fußbodenheizung", "Tiefgarage",
-               "Stellplatz", "Keller", "barrierefrei")
+# Merkmal → Wortstamm mit Mehrzahl/Beugung. Gesucht wird das ganze Wort oder der Kopf eines Kompositums (das letzte
+# Glied: „Dachgarten“ ist ein Garten, „Gartenseite“ nicht, „Tiefgaragenstellplatz“ ist ein Stellplatz). Ausnahme:
+# Kellerabteil und Kellerraum zählen als Keller.
+AUSSTATTUNG = {"Balkon": r"balkon(?:e|en)?", "Terrasse": r"terrassen?", "Loggia": r"loggi(?:a|en)",
+               "Garten": r"g[aä]rten", "Aufzug": r"aufz[uü]ge?", "Einbauküche": r"einbauküchen?",
+               "Fußbodenheizung": r"fußbodenheizung(?:en)?", "Tiefgarage": r"tiefgaragen?",
+               "Stellplatz": r"stellpl[aä]tz(?:e|en)?", "Keller": r"keller(?:n|abteile?|r[aä]ume?)?", "barrierefrei": r"barrierefrei(?:e|er|es|en)?"}
+# Verneinung im selben Satzteil: davor („keine Einbauküche“, „ohne Garten“, „nicht barrierefrei“) oder danach
+# („Einbauküche ist nicht enthalten“). Satzteile enden an Satzzeichen und Kommas, damit „Kein Keller, aber Balkon“
+# nur den Keller verneint.
+_NEIN_DAVOR = re.compile(r"\b(?:kein(?:e|en|er|em|es)?|ohne|nicht)\b", re.IGNORECASE)
+_NEIN_DANACH = re.compile(r"\b(?:nicht\s+(?:enthalten|vorhanden|möglich)|fehlt|entfällt)\b", re.IGNORECASE)
 _ZAHLTEXT = re.compile(r"\d[\d.,]*\d|\d")
 
 
@@ -35,6 +45,17 @@ def _norm(text: str) -> str:
     return " ".join(text.split()).casefold()
 
 
+def _vorhanden(text: str, stamm: str) -> bool:
+    """Steht ein Ausstattungsmerkmal unverneint im Text? Eingabe: Text einer Seite, Wortstamm aus AUSSTATTUNG.
+    Ausgabe: True, wenn ein Satzteil das Merkmal als Wort oder Kompositum-Kopf nennt, ohne es zu verneinen."""
+    muster = re.compile(rf"\b\w*?(?:{stamm})\b", re.IGNORECASE)
+    for teil in re.split(r"[.;:!?,\n]", text):
+        for m in muster.finditer(teil):
+            if not _NEIN_DAVOR.search(teil[:m.start()]) and not _NEIN_DANACH.search(teil[m.end():]):
+                return True
+    return False
+
+
 def parsen(seiten: list[str], datei: str, quelle_id: int | None) -> dict:
     """Regelbasierte Auswertung. Eingabe: Text je Seite, Dateiname, Quelle (für Fußnoten).
 
@@ -51,8 +72,8 @@ def parsen(seiten: list[str], datei: str, quelle_id: int | None) -> dict:
                                     rechenweg_text=f"{datei}, S. {nr}: „{' '.join(m.group(0).split())}“")
                 break
     ausstattung = []
-    for merkmal in AUSSTATTUNG:
-        nr = next((nr for nr, seite in enumerate(seiten, 1) if re.search(rf"\b{merkmal}", seite, re.IGNORECASE)), None)
+    for merkmal, stamm in AUSSTATTUNG.items():
+        nr = next((nr for nr, seite in enumerate(seiten, 1) if _vorhanden(seite, stamm)), None)
         if nr:
             ausstattung.append({"merkmal": merkmal, "fundstelle": f"S. {nr}", "herkunft": Herkunft.IMPORT.value})
     return {"felder": felder, "ausstattung": ausstattung}

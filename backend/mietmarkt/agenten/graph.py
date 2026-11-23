@@ -322,24 +322,25 @@ def _leitplanken(d: Entscheidung, z: AnalyseZustand, dokumente: tuple[str, ...] 
 def dienst_befunde(ergebnisse: dict) -> list[dict]:
     """Ausgefallene externe Dienste als Befunde, im Code ermittelt (nicht dem Modell überlassen).
 
-    Eingabe: Ergebnisse der Agenten. Ausgabe: Befunde (pruefung „dienst“): warnung, wenn ein Werkzeug wegen eines
+    Eingabe: Ergebnisse der Agenten. Ausgabe: Befunde (pruefung „dienst“), je Dienst höchstens einer: warnung, wenn ein Werkzeug wegen eines
     Dienstausfalls ohne Ergebnis blieb (z. B. Overpass → kein Umfeld); hinweis, wenn OSRM fehlte und Entfernungen
     nur als Luftlinie vorliegen. Ohne Zahlen im Text, damit nichts als unbelegt markiert wird.
     """
-    aus = []
+    # Je Dienst ein Befund: Agenten rufen ein ausgefallenes Werkzeug oft mehrmals auf (erneuter Versuch, zwei Agenten)
+    aus: dict[str, dict] = {}
     for r in ergebnisse.values():
         for w in r["werkzeuge"]:
             e = w["ergebnis"] if w["status"] != "error" and isinstance(w["ergebnis"], dict) else {}
             if "fehler" in e:
                 was = "Umfeld (ÖPNV, Nahversorgung, Schulen, Kitas, Ärzte)" if w["name"] == "umfeld" else w["name"]
-                aus.append({"pruefung": "dienst", "schweregrad": "warnung", "markierungen": [],
-                            "text": f"{was} nicht verfügbar: {e['fehler'].split(':')[0]}; die Lage ist ohne diese "
-                                    "Angaben beschrieben."})
+                aus.setdefault(w["name"], {"pruefung": "dienst", "schweregrad": "warnung", "markierungen": [],
+                                           "text": f"{was} nicht verfügbar: {e['fehler'].split(':')[0]}; die Lage ist "
+                                                   "ohne diese Angaben beschrieben."})
             elif any(p.get("methode_fuss") == "Luftlinie" for p in e.get("pois", [])):
-                aus.append({"pruefung": "dienst", "schweregrad": "hinweis", "markierungen": [],
-                            "text": "Routing (OSRM) nicht verfügbar: für einen Teil der Orte gibt es keine Wegezeiten, "
-                                    "nur die Luftlinie."})
-    return aus
+                aus.setdefault("routing", {"pruefung": "dienst", "schweregrad": "hinweis", "markierungen": [],
+                                           "text": "Routing (OSRM) nicht verfügbar: für einen Teil der Orte gibt es "
+                                                   "keine Wegezeiten, nur die Luftlinie."})
+    return list(aus.values())
 
 
 def freigabe_anwenden(vorschlag: dict, f: Freigabe, fortschreibung: tuple) -> dict | None:
@@ -665,7 +666,7 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
         belege = [daten, herleitungen] + [w["ergebnis"] for w in eigene]
         befunde = [b.model_dump() | {"markierungen": zahlen_pruefen(b.text, belege)} for b in antwort["parsed"].befunde
                    if b.pruefung not in ("dienst", "fundstelle")]
-        befunde += dienst_befunde(z["ergebnisse"]) + fundstellen_befunde(z["ergebnisse"])
+        befunde += dienst_befunde(z["ergebnisse"]) + fundstellen_befunde(z["ergebnisse"], daten)
         text = "\n".join(f"{b['schweregrad']}: {b['text']}" for b in befunde) or "Keine Befunde."
         update |= {"pruefungen": [befunde], "ergebnisse": {"pruefung": {
             "text": text, "werkzeuge": eigene, "markierungen": [x for b in befunde for x in b["markierungen"]]}}}
