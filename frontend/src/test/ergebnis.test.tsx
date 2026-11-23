@@ -60,6 +60,17 @@ describe("Ergebniskarte", () => {
     expect(screen.queryByRole("link", { name: "PowerPoint" })).toBeNull();
   });
 
+  it("bietet „Bericht neu erzeugen“ nur, wenn der Lauf im Bericht abbrach", () => {
+    const ab = verarbeite(LEER, { typ: "fertig", status: "abgebrochen", abbruch: "Antwort des Bericht-Agenten war nicht lesbar", kosten_eur: 0.41, ergebnisse: {}, bericht_wiederholbar: true }, 0);
+    const neu = vi.fn();
+    const { unmount } = render(<Ergebniskarte laufId="abc123" zustand={ab} onBerichtNeu={neu} />);
+    fireEvent.click(screen.getByRole("button", { name: "Bericht neu erzeugen" }));
+    expect(neu).toHaveBeenCalledOnce();
+    unmount();
+    render(<Ergebniskarte laufId="abc123" zustand={{ ...ab, berichtNeu: false }} onBerichtNeu={neu} />);
+    expect(screen.queryByRole("button", { name: "Bericht neu erzeugen" })).toBeNull();
+  });
+
   it("übersteht scrollIntoView, das ein Promise liefert (Chrome mit „smooth“), auch beim Entfernen", () => {
     const vorher = Element.prototype.scrollIntoView;
     Element.prototype.scrollIntoView = vi.fn(() => Promise.resolve()) as unknown as typeof vorher;

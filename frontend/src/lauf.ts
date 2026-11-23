@@ -50,9 +50,10 @@ export interface LaufZustand {
   ende: "fertig" | "abgebrochen" | null;
   meldung: string | null; // Abbruchgrund oder Fehler
   kostenEur: number;
+  berichtNeu: boolean; // abgebrochen im Bericht: POST /bericht kann ihn ohne neue Agentenläufe erzeugen
 }
 
-export const LEER: LaufZustand = { schritte: [], offen: null, herleitungen: null, bericht: null, ende: null, meldung: null, kostenEur: 0 };
+export const LEER: LaufZustand = { schritte: [], offen: null, herleitungen: null, bericht: null, ende: null, meldung: null, kostenEur: 0, berichtNeu: false };
 
 // Ein Ereignis, wie es api/main.py sendet; Felder je nach „typ“ (siehe mietmarkt/agenten/ereignisse.py)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -163,6 +164,7 @@ export function verarbeite(z: LaufZustand, e: Ereignis, jetzt: number): LaufZust
       n.herleitungen = e.freigabe?.herleitungen ?? z.herleitungen;
       n.bericht = e.bericht ?? z.bericht;
       n.offen = null;
+      n.berichtNeu = !!e.bericht_wiederholbar;
       break;
     }
   }
@@ -196,7 +198,8 @@ export interface Freigabe {
 }
 
 /**
- * Hält einen Lauf im Browser: starten, fortsetzen (pausierter Lauf aus der Laufliste), freigeben, antworten.
+ * Hält einen Lauf im Browser: starten, fortsetzen (pausierter Lauf aus der Laufliste), freigeben, antworten,
+ * Bericht neu erzeugen.
  * Eingabe: Projekt-ID, Rückruf nach Stromende (z. B. Laufliste neu laden). Ausgabe: Zustand, Lauf-ID, ob gerade
  * gestreamt wird, und die Aktionen.
  */
@@ -256,5 +259,6 @@ export function useLauf(projektId: number, nachEnde: () => void) {
     oeffnen,
     freigeben: (f: Freigabe) => senden("freigabe", f),
     antworten: (antwort: string) => senden("antwort", { antwort }),
+    berichtNeu: () => streamen(fetch(`/api/laeufe/${laufId}/bericht`, { method: "POST" })),
   };
 }

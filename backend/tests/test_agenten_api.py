@@ -3,7 +3,7 @@ import json
 
 import pytest
 from fastapi.testclient import TestClient
-from ki_fakes import befunde, bericht, entscheidung, ki, modelle
+from ki_fakes import abgeschnitten, befunde, bericht, entscheidung, ki, modelle
 from sqlmodel import Session, select
 
 from api import main
@@ -175,6 +175,30 @@ def test_lauf_wartet_auf_freigabe_und_setzt_fort(client, mit_freigabe):
     assert typen.index("freigabe") < typen.index("pruefung") < typen.index("bericht") < typen.index("fertig")
     assert weiter[-1]["status"] == "fertig" and weiter[-1]["bericht"]["fussnoten"]
     assert [b["schweregrad"] for b in weiter[typen.index("pruefung")]["befunde"]] == ["hinweis"]
+
+
+def test_bericht_neu_ohne_agenten_erneut_zu_bezahlen(client, mit_freigabe):
+    """Bricht der Lauf im Bericht ab, bleibt der Checkpoint; POST /bericht ruft nur den Bericht-Agenten erneut,
+    die bisherigen Kosten bleiben gebucht. Ein fertiger Lauf oder ein Abbruch vor dem Bericht ergibt 409."""
+    mit_freigabe.stark.responses[-1:] = [abgeschnitten(bericht()), abgeschnitten(bericht())]
+    lauf_id = client.post("/api/projekte/1/laeufe").json()["lauf_id"]
+    client.get(f"/api/laeufe/{lauf_id}/ereignisse")
+    ab = ereignisse(client.post(f"/api/laeufe/{lauf_id}/freigabe", json={"aktion": "annehmen"}))[-1]
+    assert ab["status"] == "abgebrochen" and "max_tokens" in ab["abbruch"] and ab["bericht_wiederholbar"]
+    # Token und stop_reason je Aufruf liegen im gespeicherten Endstand (Tabelle lauf), nicht nur im Log
+    gespeichert = ereignisse(client.get(f"/api/laeufe/{lauf_id}/ereignisse"))[-1]  # liest lauf.ergebnis
+    assert [(k["agent"], k["stop_reason"]) for k in gespeichert["kosten"]][-2:] == [("bericht", "max_tokens")] * 2
+    assert all(k["ausgabe_tokens"] > 0 for k in gespeichert["kosten"])
+    aufrufe = mit_freigabe.stark.i
+    mit_freigabe.stark.responses.append(bericht())
+    neu = ereignisse(client.post(f"/api/laeufe/{lauf_id}/bericht"))[-1]
+    assert neu["status"] == "fertig" and neu["bericht"]["fussnoten"] and not neu["bericht_wiederholbar"]
+    assert mit_freigabe.stark.i == aufrufe + 1 and neu["kosten_eur"] > ab["kosten_eur"]
+    assert client.get(f"/api/laeufe/{lauf_id}/bericht.md").status_code == 200
+    assert client.post(f"/api/laeufe/{lauf_id}/bericht").status_code == 409
+    anderer = client.post("/api/projekte/1/laeufe").json()["lauf_id"]  # Skript am Ende: scheitert vor dem Bericht
+    client.get(f"/api/laeufe/{anderer}/ereignisse")
+    assert client.post(f"/api/laeufe/{anderer}/bericht").status_code == 409
 
 
 def test_bericht_export_markdown_und_pptx(client, mit_freigabe):

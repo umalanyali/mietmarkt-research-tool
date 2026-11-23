@@ -6,7 +6,7 @@ import re
 import httpx
 import pytest
 import respx
-from ki_fakes import befunde, bericht, entscheidung, ki, modelle
+from ki_fakes import abgeschnitten, befunde, bericht, entscheidung, ki, modelle
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
@@ -20,6 +20,7 @@ from mietmarkt.agenten.graph import (
     Entscheidung,
     _leitplanken,
     baue_graph,
+    bericht_wiederholbar,
     lauf_konfig,
     startzustand,
 )
@@ -494,6 +495,41 @@ def test_absturz_in_der_korrektur_verliert_keine_kosten(db):
     assert z["bericht"]["markierungen"] == [] and z["bericht"]["korrektur"] == ["300", "18,00"]
     assert "entwurf" not in z["bericht"]
 
+
+
+@respx.mock
+def test_abgeschnittener_bericht_wird_einmal_wiederholt(db):
+    """Endet die Bericht-Antwort an max_tokens (JSON abgeschnitten), fragt der Knoten einmal mit Hinweis nach;
+    beide Aufrufe sind gebucht."""
+    geodienste_mocken()
+    m = voller_lauf(befunde("hinweis"), abgeschnitten(BERICHT), BERICHT)
+    z = laufen(graph(m, db), startzustand(1))
+    assert z["abbruch"] is None and z["bericht"]["abschnitte"]["lage"] == "Ruhige Lage am Lindenplatz."
+    assert "max_tokens" in m.stark.aufrufe[-1][-1].text
+    assert [k["agent"] for k in z["kosten"]][-2:] == ["bericht", "bericht"] and m.stark.i == len(m.stark.responses)
+
+
+@respx.mock
+def test_keine_wiederholung_bei_erschoepftem_budget(db):
+    """Sprengt schon der erste Bericht-Aufruf das Budget (0,50 €), gibt es keine Wiederholung, sondern den
+    Budget-Abbruch; der Lauf bleibt neu berichtbar. Jeder Kosteneintrag trägt den stop_reason seines Aufrufs."""
+    geodienste_mocken()
+    teuer = abgeschnitten(ki(BERICHT.text, ausgabe=60_000))  # 60.000 × 10 $ je Mio. = 0,60 €
+    m = voller_lauf(befunde("hinweis"), teuer)  # eine Wiederholung schlüge mit „Unerwarteter Modellaufruf“ fehl
+    z = laufen(graph(m, db), startzustand(1))
+    assert z["abbruch"].startswith("Budget") and m.stark.i == len(m.stark.responses) and bericht_wiederholbar(z)
+    assert z["kosten"][-1] | {"eur": None} == {"agent": "bericht", "modell": "claude-sonnet-5-5", "eingabe_tokens": 100,
+                                              "ausgabe_tokens": 60_000, "stop_reason": "max_tokens", "eur": None}
+    assert all("stop_reason" in k for k in z["kosten"])
+
+
+@respx.mock
+def test_zweimal_unlesbarer_bericht_bricht_mit_grund_ab(db):
+    """Auch die Wiederholung abgeschnitten: Abbruch nennt stop_reason, der Lauf lässt sich neu berichten."""
+    geodienste_mocken()
+    z = laufen(graph(voller_lauf(befunde("hinweis"), abgeschnitten(BERICHT), abgeschnitten(BERICHT)), db),
+               startzustand(1))
+    assert "max_tokens" in z["abbruch"] and z["bericht"] is None and bericht_wiederholbar(z)
 
 
 @respx.mock

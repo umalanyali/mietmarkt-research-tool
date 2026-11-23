@@ -51,9 +51,10 @@ function BerichtText({ b }: { b: Bericht }) {
 /**
  * Karte mit dem Ergebnis eines beendeten Laufs. Eingabe: Lauf-ID und Zustand nach „fertig“ bzw. Abbruch.
  * Ausgabe: Mietansatz je Basis (zum Stichtag und fortgeschrieben), Befunde, übernommene Unterlagen, Kosten und
- * die Export-Links; bei Abbruch nur Grund und Kosten.
+ * die Export-Links; bei Abbruch nur Grund und Kosten, nach Abbruch im Bericht dazu „Bericht neu erzeugen“
+ * (onBerichtNeu).
  */
-export function Ergebniskarte({ laufId, zustand }: { laufId: string; zustand: LaufZustand }) {
+export function Ergebniskarte({ laufId, zustand, onBerichtNeu }: { laufId: string; zustand: LaufZustand; onBerichtNeu?: () => void }) {
   const [offen, setOffen] = useState(false);
   const karte = useRef<HTMLElement>(null);
   // Beim Erscheinen in den Blick holen: nach „Annehmen“ steht man sonst unten bei der Freigabe-Karte
@@ -68,6 +69,14 @@ export function Ergebniskarte({ laufId, zustand }: { laufId: string; zustand: La
         <h3 id="d-ergebnis-titel">Lauf abgebrochen</h3>
         <p>{zustand.meldung ?? "ohne Grund"}. Es gibt keinen Bericht; „Analyse starten“ beginnt einen neuen Lauf.</p>
         {kosten}
+        {zustand.berichtNeu && onBerichtNeu && (
+          <>
+            <p className="d-klein">Agenten, Freigabe und Prüfung sind gesichert; neu bezahlt wird nur der Bericht-Agent.</p>
+            <button type="button" className="e-knopf e-knopf-primaer" onClick={onBerichtNeu}>
+              Bericht neu erzeugen
+            </button>
+          </>
+        )}
       </section>
     );
   }

@@ -12,6 +12,7 @@ ainvoke(None, …) weiter, ein angehaltener mit ainvoke(Command(resume=Freigabe 
 import asyncio
 import base64
 import json
+import logging
 from typing import Literal
 
 from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage, SystemMessage, ToolMessage
@@ -109,6 +110,10 @@ PROMPTS = {
 KORREKTUR = ("Dein Entwurf hat Mängel:\n{maengel}\nSchreibe den Bericht noch einmal: ersetze freie Zahlen und "
              "Zahlwörter durch den passenden Platzhalter aus dem Werte-Katalog oder lass sie weg; gib jedem Satz einen "
              "gültigen Beleg oder streiche ihn. Dein Entwurf war:\n{entwurf}")
+
+UNLESBAR = ("Deine letzte Antwort war nicht lesbar ({grund}). Antworte noch einmal, nur mit dem JSON nach Schema und "
+            "knapper: wenige kurze Sätze je Abschnitt.")
+logger = logging.getLogger("mietmarkt.laeufe")
 
 
 class Entscheidung(BaseModel):
@@ -396,12 +401,14 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
     ableser = m.stark.with_structured_output(Ablesungen, method="json_schema", include_raw=True)
 
     def kosten(agent: str, antwort: AIMessage) -> dict:
-        """Verbrauch eines Aufrufs. Eingabe: Agent, Modellantwort. Ausgabe: Eintrag für zustand.kosten."""
+        """Verbrauch eines Aufrufs. Eingabe: Agent, Modellantwort. Ausgabe: Eintrag für zustand.kosten; mit
+        stop_reason (end_turn, tool_use, max_tokens …), damit abgeschnittene Antworten im Endstand erkennbar sind."""
         modell = rollen[agent][1]
         u = antwort.usage_metadata or {}
         eur = kosten_eur(modell, u.get("input_tokens", 0), u.get("output_tokens", 0), eur_je_usd=k.ki_eur_je_usd)
         return {"agent": agent, "modell": modell, "eingabe_tokens": u.get("input_tokens", 0),
-                "ausgabe_tokens": u.get("output_tokens", 0), "eur": eur.model_dump(mode="json")}
+                "ausgabe_tokens": u.get("output_tokens", 0), "stop_reason": antwort.response_metadata.get("stop_reason"),
+                "eur": eur.model_dump(mode="json")}
 
     def budget_erschoepft(z: AnalyseZustand) -> str | None:
         """Prüft vor jedem Modellaufruf das Budget. Eingabe: Zustand. Ausgabe: Abbruchgrund oder None."""
@@ -707,8 +714,15 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
         nachrichten, katalog, quellen, belege = bericht_grundlagen(z)
         antwort = await berichter.ainvoke(nachrichten)
         verbrauch = [kosten("bericht", antwort["raw"])]
+        if antwort["parsed"] is None:  # meist abgeschnitten (max_tokens): einmal mit Hinweis wiederholen
+            grund = unlesbar_grund(antwort)
+            if budget := budget_erschoepft({"kosten": z["kosten"] + verbrauch}):
+                return {"kosten": verbrauch, "abbruch": budget}
+            antwort = await berichter.ainvoke([*nachrichten, HumanMessage(UNLESBAR.format(grund=grund))])
+            verbrauch.append(kosten("bericht", antwort["raw"]))
         if antwort["parsed"] is None:
-            return {"kosten": verbrauch, "abbruch": "Antwort des Bericht-Agenten war nicht lesbar"}
+            return {"kosten": verbrauch,
+                    "abbruch": f"Antwort des Bericht-Agenten war nicht lesbar ({unlesbar_grund(antwort)})"}
         b = fuellen(antwort["parsed"].model_dump(), katalog, quellen, belege)
         b |= {"korrektur": [x["fundstelle"] for x in b["markierungen"]], "befunde": z["pruefungen"][-1],
               "herleitungen": z["freigabe"]["herleitungen"]}
@@ -763,6 +777,26 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
                             else END, ["bericht_korrektur", END])
     g.add_edge("bericht_korrektur", END)
     return g.compile(checkpointer=checkpointer)
+
+
+def unlesbar_grund(antwort: dict) -> str:
+    """Warum eine strukturierte Antwort nicht lesbar war; schreibt die Rohantwort ins lokale Server-Log.
+
+    Eingabe: Ergebnis von with_structured_output(include_raw=True). Ausgabe: z. B. „stop_reason max_tokens,
+    4.096 Ausgabe-Token“ für Abbruchgrund und Wiederholungshinweis.
+    """
+    roh = antwort["raw"]
+    stopp = roh.response_metadata.get("stop_reason", "unbekannt")
+    token = (roh.usage_metadata or {}).get("output_tokens", 0)
+    logger.warning("Unlesbare Modellantwort: stop_reason=%s, Ausgabe-Token=%s, Fehler=%s\nRohantwort:\n%s",
+                   stopp, token, antwort.get("parsing_error"), roh.text)
+    return f"stop_reason {stopp}, {de(token, 0)} Ausgabe-Token"
+
+
+def bericht_wiederholbar(werte: dict) -> bool:
+    """Ob ein abgebrochener Lauf nur im Bericht scheiterte und sich am Checkpoint neu berichten lässt (Agenten,
+    Freigabe und Prüfung liegen vor). Eingabe: Zustandswerte. Ausgabe: bool."""
+    return bool(werte.get("abbruch") and werte.get("freigabe") and werte.get("pruefungen") and not werte.get("bericht"))
 
 
 def lesen(inhalt: str) -> object:

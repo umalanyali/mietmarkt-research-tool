@@ -210,7 +210,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
       </div>
 
       <Agentenleiste lauf={lauf} laeufe={laeufe} ki={gesundheit.status === "bereit" ? gesundheit.daten.ki : null} />
-      {lauf.laufId && lauf.zustand.ende && !lauf.aktiv && <Ergebniskarte laufId={lauf.laufId} zustand={lauf.zustand} />}
+      {lauf.laufId && lauf.zustand.ende && !lauf.aktiv && <Ergebniskarte laufId={lauf.laufId} zustand={lauf.zustand} onBerichtNeu={lauf.berichtNeu} />}
 
       {anlage.status !== "ruhig" && anlage.status !== "laden" && (
         <div className="d-hinweis-leiste" role="alert">

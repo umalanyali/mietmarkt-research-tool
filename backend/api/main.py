@@ -21,7 +21,14 @@ from starlette.background import BackgroundTask
 
 from mietmarkt import __version__
 from mietmarkt.agenten.ereignisse import ereignisse
-from mietmarkt.agenten.graph import Antwort, Freigabe, baue_graph, lauf_konfig, startzustand
+from mietmarkt.agenten.graph import (
+    Antwort,
+    Freigabe,
+    baue_graph,
+    bericht_wiederholbar,
+    lauf_konfig,
+    startzustand,
+)
 from mietmarkt.agenten.modelle import Modelle, aus_konfig
 from mietmarkt.comps import im_umkreis
 from mietmarkt.db import datenbankpfad, engine
@@ -462,16 +469,20 @@ def _ausfuehren(lauf: Lauf, e, k: Konfig, m: Modelle, pfad: Path, fortsetzung: C
                            "rueckfragen": [{"frage": f, "antwort": a} for f, a in
                                            zip(ende["rueckfragen"], ende.get("antworten", []), strict=False)],
                            "kosten_eur": sum(x["eur"]["wert"] for x in ende["kosten"]),
+                           "kosten": ende["kosten"],  # je Aufruf: Agent, Modell, Token, stop_reason, €
                            "ergebnisse": {a: {"text": r["text"], "markierungen": r["markierungen"]}
                                           for a, r in ende["ergebnisse"].items()},
-                           "freigabe": ende.get("freigabe"), "bericht": ende.get("bericht")}
+                           "freigabe": ende.get("freigabe"), "bericht": ende.get("bericht"),
+                           "bericht_wiederholbar": bericht_wiederholbar(ende)}
                 # Erst speichern, dann senden (bricht die Verbindung beim Senden ab, ist der Endstand trotzdem da).
                 # Danach wird der Checkpoint nicht mehr gebraucht; so wächst checkpoints.db nicht mit jedem Lauf.
+                # Ausnahme: nur der Bericht scheiterte – dann bleibt er für POST /bericht (Agenten nicht neu bezahlen).
                 with Session(e) as s2:
                     beendet = s2.get(Lauf, lauf_id)
                     beendet.ergebnis = json.dumps(schluss, ensure_ascii=False, default=str)
                     s2.commit()
-                await cp.adelete_thread(lauf_id)
+                if not bericht_wiederholbar(ende):
+                    await cp.adelete_thread(lauf_id)
                 yield _sse(schluss)
         finally:  # auch bei Fehlern außerhalb von astream (z. B. „database is locked“) nicht auf 409 hängen bleiben
             aktive_laeufe.discard(lauf_id)
@@ -543,6 +554,27 @@ async def lauf_antwort(lauf_id: str, a: Antwort, s: Sitzung, k: KonfigDep, m: Mo
     Eingabe: Lauf-ID, {antwort}. Ausgabe: text/event-stream. 422 bei leerer Antwort; sonst wie _fortsetzen.
     """
     return await _fortsetzen(s, lauf_id, "rueckfrage", a.model_dump(), k, m, pfad)
+
+
+@app.post("/api/laeufe/{lauf_id}/bericht")
+async def bericht_neu(lauf_id: str, s: Sitzung, k: KonfigDep, m: ModelleDep, pfad: PfadDep) -> StreamingResponse:
+    """Erzeugt den Bericht eines im Bericht abgebrochenen Laufs neu; Agenten, Freigabe und Prüfung kommen aus dem
+    Checkpoint, bezahlt wird nur der Bericht-Agent. Eingabe: Lauf-ID. Ausgabe: Ereignisstrom wie /ereignisse.
+    404 unbekannt, 503 ohne KI, 409 wenn der Lauf nicht im Bericht abgebrochen ist (oder kein Checkpoint mehr da).
+    """
+    lauf = _lauf(s, lauf_id)
+    if m is None:
+        raise HTTPException(status_code=503, detail=k.ki_problem)
+    async with AsyncSqliteSaver.from_conn_string(str(pfad)) as cp:
+        graph, konf = baue_graph(m, s.get_bind(), k, cp), lauf_konfig(lauf_id)
+        stand = await graph.aget_state(konf)
+        if not lauf.ergebnis or not bericht_wiederholbar(stand.values):
+            raise HTTPException(status_code=409, detail="Lauf ist nicht im Bericht abgebrochen")
+        # Als hätte die Prüfung gerade geendet, nur ohne Abbruch: ihre Kante führt dann wieder zum Bericht
+        await graph.aupdate_state(konf, {"abbruch": None}, as_node="pruefung")
+    lauf.ergebnis = None
+    s.commit()
+    return _ausfuehren(lauf, s.get_bind(), k, m, pfad, None)
 
 
 @app.get("/api/laeufe/{lauf_id}/bericht.{art}")

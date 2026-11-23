@@ -43,7 +43,7 @@ class FakeModell(FakeMessagesListChatModel):
     def _stream(self, messages, stop=None, run_manager=None, **kwargs):
         """Antwort in Stücken wie bei ChatAnthropic (LangGraph streamt im Modus „messages“).
 
-        Text Wort für Wort; Werkzeugaufrufe und Tokenverbrauch hängen am letzten Stück. Ausgabe: Stücke.
+        Text Wort für Wort; Werkzeugaufrufe, Tokenverbrauch und stop_reason hängen am letzten Stück. Ausgabe: Stücke.
         """
         self.aufrufe.append(messages)
         antwort = self._naechste()
@@ -53,7 +53,8 @@ class FakeModell(FakeMessagesListChatModel):
             stueck = AIMessageChunk(content=wort, tool_call_chunks=[
                 {"name": a["name"], "args": json.dumps(a["args"]), "id": a["id"], "index": n}
                 for n, a in enumerate(antwort.tool_calls)] if letztes else [],
-                usage_metadata=antwort.usage_metadata if letztes else None)
+                usage_metadata=antwort.usage_metadata if letztes else None,
+                response_metadata=antwort.response_metadata if letztes else {})
             if run_manager:
                 run_manager.on_llm_new_token(wort, chunk=ChatGenerationChunk(message=stueck))
             yield ChatGenerationChunk(message=stueck)
@@ -101,6 +102,12 @@ def bericht(**abschnitte: str | list[dict]) -> AIMessage:
     return ki(json.dumps({k: v if isinstance(v, list) else [{"text": v, "belege": ["befund:1" if k == "risiken"
                                                                                  else "projekt"]}]
                           for k, v in texte.items()}))
+
+
+def abgeschnitten(antwort: AIMessage) -> AIMessage:
+    """Dieselbe Antwort, nach der Hälfte abgeschnitten wie bei erreichtem max_tokens. Ausgabe: AIMessage."""
+    return AIMessage(content=antwort.text[:len(antwort.text) // 2], usage_metadata=antwort.usage_metadata,
+                     response_metadata={"stop_reason": "max_tokens"})
 
 
 def modelle(stark: list[AIMessage], schnell: list[AIMessage], *, schnell_fehler: bool = False) -> Modelle:
