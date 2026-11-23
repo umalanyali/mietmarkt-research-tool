@@ -13,7 +13,7 @@ from sqlmodel import Session, select
 from ..comps import filtern, im_umkreis
 from ..dokumente import suchen
 from ..geo import dienste
-from ..geo.umfeld import umfeld as geo_umfeld
+from ..geo.umfeld import umfeld_fuer_projekt
 from ..kennzahlen import comps_kennzahlen, eur_qm
 from ..konfig import Konfig
 from ..mietansatz import BASIS_TEXT, Anpassung, Basis, fachregeln_pruefen, herleiten, mit_fortschreibung
@@ -93,7 +93,7 @@ def werkzeuge(e: Engine, k: Konfig) -> dict[str, list[BaseTool]]:
         with Session(e) as s:
             p = s.get(Projekt, projekt_id)
             try:
-                ergebnis = await geo_umfeld(p.lat, p.lon, s)
+                ergebnis = await umfeld_fuer_projekt(p, s)
             except dienste.DienstNichtErreichbar as f:
                 return _json({"fehler": str(f)})
         return _json(ergebnis.model_dump())

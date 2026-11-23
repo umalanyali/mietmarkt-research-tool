@@ -106,7 +106,7 @@ def test_projekt_anlegen_faellt_auf_rueckwaertssuche_zurueck(client):
 @respx.mock
 def test_umfeld_mit_wegezeiten_und_luftlinie_bei_ausfall(client):
     """Umfeld: POIs aus Overpass, Fußzeiten aus OSRM; fällt das Rad-Routing aus, ist die Methode „Luftlinie“."""
-    respx.post(dienste.OVERPASS_URL).mock(return_value=httpx.Response(200, json={"elements": [
+    respx.post(url__regex=r"/api/interpreter$").mock(return_value=httpx.Response(200, json={"elements": [
         {"type": "node", "lat": 51.3130, "lon": 9.4800, "tags": {"highway": "bus_stop", "name": "Lindenplatz"}}]}))
     respx.get(url__startswith=dienste.ROUTING_URL["fuss"]).mock(
         return_value=httpx.Response(200, json={"code": "Ok", "durations": [[0, 120.0]], "distances": [[0, 150.0]]}))
@@ -120,8 +120,8 @@ def test_umfeld_mit_wegezeiten_und_luftlinie_bei_ausfall(client):
 
 @respx.mock
 def test_umfeld_overpass_ausfall_ist_503(client):
-    """Antwortet Overpass nicht, gibt es kein Umfeld, sondern 503 (bewusst ohne Rückfall-Server)."""
-    respx.post(dienste.OVERPASS_URL).mock(return_value=httpx.Response(504))
+    """Antwortet Overpass nicht, gibt es kein Umfeld, sondern 503 (alle Server aus der Konfig ausgefallen)."""
+    respx.post(url__regex=r"/api/interpreter$").mock(return_value=httpx.Response(504))
     assert client.get("/api/projekte/1/umfeld").status_code == 503
 
 
@@ -134,7 +134,7 @@ FERN = {"label": "Feldweg 3, 99998 Fernstadt", "strasse": "Feldweg 3", "plz": "9
 @respx.mock
 def test_osrm_null_dauer_faellt_auf_luftlinie_zurueck(client):
     """P1: Ein nicht routbares Ziel (OSRM liefert null) ergibt Luftlinie statt HTTP 500."""
-    respx.post(dienste.OVERPASS_URL).mock(return_value=httpx.Response(200, json={"elements": [
+    respx.post(url__regex=r"/api/interpreter$").mock(return_value=httpx.Response(200, json={"elements": [
         {"type": "node", "lat": 51.3130, "lon": 9.4800, "tags": {"highway": "bus_stop", "name": "Lindenplatz"}}]}))
     respx.get(url__startswith=dienste.ROUTING_URL["fuss"]).mock(
         return_value=httpx.Response(200, json={"code": "Ok", "durations": [[0, None]], "distances": [[0, None]]}))

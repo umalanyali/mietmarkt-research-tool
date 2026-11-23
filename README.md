@@ -182,15 +182,18 @@ gleichzeitig gestellt wird. Ältere Einträge werden gelöscht, fehlerhafte Antw
 |---|---|---|---|
 | Photon (`photon.komoot.io`) | Adressvorschläge beim Tippen | der getippte Suchtext (ab 3 Zeichen, 300 ms nach dem letzten Tastendruck) | nur Deutschland (bbox), max. 5 Treffer, gedrosselt (2 Anfragen/s) |
 | Nominatim (`nominatim.openstreetmap.org`) | endgültige Adresse beim Anlegen eines Projekts, Rückwärtssuche | gewählte Adresse bzw. deren Koordinaten | höchstens 1 Anfrage pro Sekunde, nie für die Autovervollständigung (Nutzungsrichtlinie) |
-| Overpass (`overpass-api.de`) | Umfeld: ÖPNV, Supermärkte, Schulen, Kitas, Ärzte | Koordinaten des Standorts, Radius 1.000 m | gedrosselt (1 Anfrage/s), Rechenzeit 25 s, bewusst ohne Rückfall-Server |
+| Overpass (`overpass-api.de`) | Umfeld: ÖPNV, Supermärkte, Schulen, Kitas, Ärzte | Koordinaten des Standorts, Radius 1.000 m | gedrosselt (1 Anfrage/s), Rechenzeit 20 s, Timeout 25 s je Server; Ersatzserver nur, wenn in `OVERPASS_URLS` eingetragen; Umfeld je Projekt 30 Tage gespeichert (Fußnote nennt das Abrufdatum) |
 | OSRM (`routing.openstreetmap.de`, FOSSGIS) | Wegezeiten zu Fuß und mit dem Rad | Koordinaten von Standort und bis zu 3 Zielen je Kategorie | gedrosselt; fällt der Dienst aus oder ist ein Ziel nicht routbar, gilt die Luftlinie (Kennzeichnung „Luftlinie“); der Rechenweg nennt das Abrufdatum |
 | OpenFreeMap (`tiles.openfreemap.org`) | Kartenkacheln und Schriften der Karte | Kachelkoordinaten des sichtbaren Ausschnitts (direkt aus dem Browser) | – |
 
 Warum nicht `router.project-osrm.org`: Der OSRM-Demo-Server rechnet nur mit dem Autoprofil und liefert für „foot“ die
 Autozeit. Die FOSSGIS-Server sprechen dieselbe OSRM-API mit echten Fuß- und Radprofilen (`backend/mietmarkt/geo/dienste.py`).
 
-Warum kein Overpass-Rückfall: Die erreichbaren Ausweich-Server liegen außerhalb der EU; echte Projektkoordinaten
-sollen dort nicht landen. Bei Überlast zeigt die App lieber „Dienst nicht erreichbar“.
+Overpass-Ersatzserver nur auf Wunsch: Standardmäßig steht in `OVERPASS_URLS` nur `overpass-api.de`. Weitere Server
+(z. B. `https://overpass.kumi.systems/api/interpreter`) trägt man selbst in `.env` ein; sie bekommen dann die
+Projektkoordinaten. Fällt der erste aus, fragt die App den nächsten, die Fußnote nennt den Server, der geliefert hat.
+Ohne Ersatzserver zeigt die App bei Überlast „Dienst nicht erreichbar“. Ein erfolgreiches Umfeld liegt je Projekt
+30 Tage in der Tabelle `umfeldcache`, ein Lauf braucht Overpass dann nicht.
 
 Der Browser darf nur Adressen in Deutschland übergeben (Koordinaten-, Längen- und NaN-Prüfung, sonst 422).
 Fällt ein Dienst aus, antwortet die API mit 503; die Oberfläche zeigt „Dienst nicht erreichbar“, der Rest bleibt nutzbar.

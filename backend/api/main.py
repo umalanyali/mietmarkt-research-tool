@@ -34,7 +34,7 @@ from mietmarkt.geo.dienste import (
     rueckwaerts,
     vorschlaege,
 )
-from mietmarkt.geo.umfeld import Umfeld, umfeld
+from mietmarkt.geo.umfeld import Umfeld, umfeld_fuer_projekt
 from mietmarkt.kennzahlen import (
     Preisklassen,
     anfragen_je_monat,
@@ -191,7 +191,7 @@ async def projekt_umfeld(projekt_id: int, s: Sitzung) -> Umfeld:
     """Haltestellen, Nahversorgung, Schulen, Kitas, Ärzte im Umkreis von 1 km mit Wegezeiten. Eingabe: Projekt-ID."""
     p = _projekt(s, projekt_id)
     try:
-        return await umfeld(p.lat, p.lon, s)
+        return await umfeld_fuer_projekt(p, s)
     except DienstNichtErreichbar as e:
         raise _dienst_fehler(e) from e
 

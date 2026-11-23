@@ -166,6 +166,13 @@ def test_kaufmaennisch_gerundet_und_stellen_der_quelle():
     assert anzeigen({"wert": 2.345, "einheit": "%", "herkunft": "berechnet"}) == "2,3 %"
 
 
+def test_jahr_ohne_tausenderpunkt():
+    """Jahreszahlen (Einheit „Jahr“) erscheinen ohne Tausendertrennung, andere große Zahlen weiter mit."""
+    from mietmarkt.agenten.bericht import anzeigen
+    assert anzeigen({"wert": 2024.0, "einheit": "Jahr", "herkunft": "ki"}) == "2024 Jahr"
+    assert anzeigen({"wert": 2024.0, "einheit": "m²", "herkunft": "import"}) == "2.024 m²"
+
+
 def test_markdown_maskiert_modelltext_und_erklaert_markierungen():
     """S3: Links, Bilder und HTML aus Modell- oder Importtext werden im Markdown maskiert, die eigenen Fußnoten-
     zeichen bleiben. P17: Gab es Markierungen, erklärt der Export „[?]“ und gestrichene Aussagen."""

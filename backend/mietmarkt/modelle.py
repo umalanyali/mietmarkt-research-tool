@@ -124,6 +124,16 @@ class GeoCache(SQLModel, table=True):
     abgerufen_am: dt.datetime
 
 
+class UmfeldCache(SQLModel, table=True):
+    """Letztes erfolgreiches Umfeld je Projekt (30 Tage gültig), damit ein Lauf ohne Overpass auskommt."""
+
+    projekt_id: int = Field(foreign_key="projekt.id", primary_key=True)
+    lat: float  # Koordinaten beim Abruf: ändern sie sich, gilt der Eintrag nicht mehr
+    lon: float
+    abgerufen_am: dt.date  # Datum der Overpass-Daten, nicht des Speicherns
+    umfeld_json: str
+
+
 class Wohnung(SQLModel, table=True):
     """Eine Wohnungsart im Wohnungsmix des Projekts (Projektdaten, vom Nutzer erfasst)."""
 

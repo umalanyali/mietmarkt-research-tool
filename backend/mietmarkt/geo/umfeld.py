@@ -7,7 +7,8 @@ from pydantic import BaseModel
 from sqlmodel import Session
 
 from ..format import de
-from ..modelle import Herkunft, Wert
+from ..modelle import Herkunft, Projekt, UmfeldCache, Wert
+from .cache import GUELTIG
 from .dienste import ATTRIBUTION, KATEGORIEN, umfeld_pois, wegezeiten
 from .distanz import entfernung_km
 
@@ -34,6 +35,7 @@ class Umfeld(BaseModel):
 
     pois: list[UmfeldPoi]
     radius_m: int
+    abgerufen_am: dt.date  # ältestes Abrufdatum der Overpass-Daten
     attribution: str = ATTRIBUTION
 
 
@@ -62,8 +64,28 @@ async def umfeld(lat: float, lon: float, s: Session, radius_m: int = 1000) -> Um
         fuss = zeiten["fuss"][i] if zeiten["fuss"] else None
         rad = zeiten["rad"][i] if zeiten["rad"] else None
         pois.append(UmfeldPoi(
-            kategorie=p.kategorie, name=p.name, lat=p.lat, lon=p.lon, luftlinie=luft,
+            kategorie=p.kategorie, name=p.name, lat=p.lat, lon=p.lon,
+            # Der Ort selbst stammt von Overpass: die Fußnote nennt den Server, der tatsächlich geliefert hat
+            luftlinie=luft.model_copy(update={"rechenweg_text": f"{luft.rechenweg_text}; Ort: {p.quelle}"}),
             zu_fuss=_minuten("Fußweg", *fuss) if fuss else None, rad=_minuten("Radweg", *rad) if rad else None,
             methode_fuss="Route" if fuss else "Luftlinie", methode_rad="Route" if rad else "Luftlinie",
         ))
-    return Umfeld(pois=pois, radius_m=radius_m)
+    stand = min((p.stand for p, _ in auswahl), default=dt.date.today())
+    return Umfeld(pois=pois, radius_m=radius_m, abgerufen_am=stand)
+
+
+async def umfeld_fuer_projekt(p: Projekt, s: Session) -> Umfeld:
+    """Umfeld eines Projekts, aus der Datenbank, solange es jünger als 30 Tage ist und die Koordinaten passen.
+
+    Eingabe: Projekt, Sitzung. Ausgabe: Umfeld; die Rechenwege nennen das ursprüngliche Abrufdatum.
+    Sonst neu abgerufen und gespeichert; ein Ausfall (DienstNichtErreichbar) wird nicht gespeichert.
+    """
+    eintrag = s.get(UmfeldCache, p.id)
+    if eintrag and (eintrag.lat, eintrag.lon) == (p.lat, p.lon) and dt.date.today() - eintrag.abgerufen_am <= GUELTIG:
+        return Umfeld.model_validate_json(eintrag.umfeld_json)
+    u = await umfeld(p.lat, p.lon, s)
+    eintrag = eintrag or UmfeldCache(projekt_id=p.id, lat=p.lat, lon=p.lon, abgerufen_am=u.abgerufen_am, umfeld_json="")
+    eintrag.lat, eintrag.lon, eintrag.abgerufen_am, eintrag.umfeld_json = p.lat, p.lon, u.abgerufen_am, u.model_dump_json()
+    s.add(eintrag)
+    s.commit()
+    return u

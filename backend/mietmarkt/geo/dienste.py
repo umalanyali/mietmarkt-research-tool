@@ -11,15 +11,15 @@ import httpx
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
+from ..konfig import Konfig
 from . import cache
 
 USER_AGENT = "MietmarktResearch/0.1 (privates Projekt)"  # CLAUDE.md Regel 6
 ATTRIBUTION = "© OpenStreetMap-Mitwirkende"
 PHOTON_URL = "https://photon.komoot.io/api/"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org"
-# Bewusst ohne Rückfall-Server: die erreichbare Alternative läge außerhalb der EU (Datenschutz, Befund S5)
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
-OVERPASS_TIMEOUT_S = 25  # Rechenzeit-Limit, das Overpass sich selbst setzt ([timeout:25])
+OVERPASS_TIMEOUT_S = 25  # so lange wartet der Client je Server, dann ist der nächste dran
+OVERPASS_RECHENZEIT_S = 20  # Limit, das Overpass sich selbst setzt; kleiner, damit die Antwort vor dem Timeout kommt
 # Der OSRM-Demo-Server (router.project-osrm.org) kennt nur das Autoprofil und liefert für „foot“ Autozeiten.
 # Die FOSSGIS-Instanzen sprechen dieselbe OSRM-API, aber mit echten Fuß- und Radprofilen.
 ROUTING_URL = {"fuss": "https://routing.openstreetmap.de/routed-foot", "rad": "https://routing.openstreetmap.de/routed-bike"}
@@ -188,6 +188,8 @@ class Poi(BaseModel):
     name: str
     lat: float
     lon: float
+    quelle: str  # welcher Overpass-Server geliefert hat und wann, für die Fußnote
+    stand: dt.date  # Abrufdatum der Overpass-Antwort (aus dem Anfrage-Cache ggf. älter als heute)
 
 
 # Reihenfolge = Anzeige-Reihenfolge; Filter in Overpass-QL
@@ -219,16 +221,25 @@ async def umfeld_pois(lat: float, lon: float, s: Session, radius_m: int = 1000) 
     """Haltestellen, Supermärkte, Schulen, Kitas und Ärzte im Radius.
 
     Eingabe: Mittelpunkt, Sitzung, Radius in m. Ausgabe: POIs in Antwort-Reihenfolge; Wege/Flächen über ihren Mittelpunkt.
+    Fragt die Server aus Konfig.overpass_urls der Reihe nach; erst wenn alle ausfallen, DienstNichtErreichbar.
     """
     teile = "".join(f"{f}(around:{radius_m},{lat},{lon});" for filter_ in KATEGORIEN.values() for f in filter_)
-    abfrage = f"[out:json][timeout:{OVERPASS_TIMEOUT_S}];({teile});out center tags;"
-    # Client wartet länger als das Server-Limit, weil Warteschlange und Übertragung dazukommen
-    return await _abrufen(s, "overpass", OVERPASS_URL, lambda d, _: _pois_aus(d), daten={"data": abfrage}, drossel=OVERPASS_DROSSEL,
-                          timeout=OVERPASS_TIMEOUT_S + 15)
+    abfrage = f"[out:json][timeout:{OVERPASS_RECHENZEIT_S}];({teile});out center tags;"
+    urls = Konfig().overpass_urls
+    for i, url in enumerate(urls):
+        host = httpx.URL(url).host
+        try:
+            return await _abrufen(s, "overpass", url, lambda d, stand, host=host: _pois_aus(d, host, stand),
+                                  daten={"data": abfrage}, drossel=OVERPASS_DROSSEL, timeout=OVERPASS_TIMEOUT_S)
+        except DienstNichtErreichbar:
+            if i == len(urls) - 1:
+                raise
+    raise DienstNichtErreichbar("overpass", "kein Server in OVERPASS_URLS")
 
 
-def _pois_aus(daten: dict) -> list[Poi]:
-    """Overpass-Antwort in POIs umwandeln. Eingabe: JSON. Ausgabe: POIs; ValueError bei gemeldetem Abbruch."""
+def _pois_aus(daten: dict, host: str, stand: dt.date) -> list[Poi]:
+    """Overpass-Antwort in POIs umwandeln. Eingabe: JSON, Server, Abrufdatum. Ausgabe: POIs mit Quelle; ValueError
+    bei gemeldetem Abbruch."""
     # Überlast meldet Overpass oft mit HTTP 200 und einer Bemerkung statt eines Fehlerstatus (Befund P3)
     if "error" in daten.get("remark", ""):
         raise ValueError(daten["remark"])
@@ -238,7 +249,8 @@ def _pois_aus(daten: dict) -> list[Poi]:
         kategorie = _kategorie(tags)
         punkt = e if "lat" in e else e.get("center")
         if kategorie and punkt:
-            pois.append(Poi(kategorie=kategorie, name=tags.get("name", kategorie), lat=punkt["lat"], lon=punkt["lon"]))
+            pois.append(Poi(kategorie=kategorie, name=tags.get("name", kategorie), lat=punkt["lat"], lon=punkt["lon"], stand=stand,
+                            quelle=f"OpenStreetMap über {host} (Overpass, abgerufen am {stand:%d.%m.%Y})"))
     return pois
 
 

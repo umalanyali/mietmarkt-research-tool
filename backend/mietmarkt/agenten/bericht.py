@@ -25,6 +25,9 @@ DATIV = re.compile(r"\b(?:bei|nach|von|mit|in|seit|aus|zu|binnen|innerhalb von|v
 UNBEKANNT = "[?]"
 
 
+OHNE_TAUSENDER = {"Jahr"}  # Einheiten, deren Zahlen nie Tausenderpunkte tragen (2024, nicht 2.024)
+
+
 def werte_katalog(z: dict) -> dict[str, dict]:
     """Alle Werte, die der Bericht nennen darf. Eingabe: Zustand des Graphen. Ausgabe: {ID: Wert als dict}.
 
@@ -73,7 +76,10 @@ def anzeigen(w: dict) -> str:
     if w.get("einheit") == "km":
         m = round(w["wert"] * 100) * 10  # auf 10 m
         return f"rd. {de(m, 0)} m" if m < 1000 else f"rd. {de(w['wert'], 1)} km"
-    text = f"{de(w['wert'], _stellen(w))} {w.get('einheit', '')}".rstrip()
+    zahl = de(w["wert"], _stellen(w))
+    if w.get("einheit") in OHNE_TAUSENDER:
+        zahl = zahl.replace(".", "")  # im deutschen Format ist der Punkt nur Tausendertrenner
+    text = f"{zahl} {w.get('einheit', '')}".rstrip()
     # Aus Diagrammen abgelesene Werte sind nur ungefähr (die Ablesung schreibt „Diagramm“ in den Rechenweg)
     return f"rd. {text}" if w.get("herkunft") == "abgelesen" and "Diagramm" in w.get("rechenweg_text", "") else text
 

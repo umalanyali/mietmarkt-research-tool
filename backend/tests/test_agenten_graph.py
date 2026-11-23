@@ -52,7 +52,7 @@ def db(tmp_path):
 def geodienste_mocken(overpass: int = 200, routing: int = 200):
     """Overpass liefert eine Haltestelle, OSRM 120 s zu Fuß und 60 s mit dem Rad. Eingabe: HTTP-Status je Dienst
     (z. B. 503 = Ausfall)."""
-    respx.post(dienste.OVERPASS_URL).mock(return_value=httpx.Response(overpass, json={"elements": [
+    respx.post(url__regex=r"/api/interpreter$").mock(return_value=httpx.Response(overpass, json={"elements": [
         {"type": "node", "lat": 51.3130, "lon": 9.4800, "tags": {"highway": "bus_stop", "name": "Lindenplatz"}}]}))
     for profil, dauer in (("fuss", 120.0), ("rad", 60.0)):
         respx.get(url__startswith=dienste.ROUTING_URL[profil]).mock(return_value=httpx.Response(

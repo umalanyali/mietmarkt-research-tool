@@ -31,8 +31,9 @@
 - Import-Endpunkt (Upload) und Prüftabelle in der Oberfläche fehlen noch; der Import ist bisher nur als Fachfunktion da.
 
 ## M4 – Adresssuche und Standort (22.11.2026, weitgehend fertig)
-- Paket `backend/mietmarkt/geo/`: Photon (Vorschläge, 2/s), Nominatim (Geokodieren/Rückwärtssuche, 1 Anfrage/s), Overpass (Umfeld 1 km,
-  ohne Rückfall-Server), OSRM über routing.openstreetmap.de (Fuß/Rad; der Demo-Server kennt nur Auto), Cache-Tabelle `geocache` 30 Tage.
+- Paket `backend/mietmarkt/geo/`: Photon (Vorschläge, 2/s), Nominatim (Geokodieren/Rückwärtssuche, 1 Anfrage/s), Overpass (Umfeld 1 km;
+  nachträglich: Server-Liste `OVERPASS_URLS`, Standard nur overpass-api.de, Ersatzserver nur auf Wunsch, Timeout 25 s je
+  Server, Umfeld je Projekt 30 Tage in `umfeldcache`), OSRM über routing.openstreetmap.de (Fuß/Rad; der Demo-Server kennt nur Auto), Cache-Tabelle `geocache` 30 Tage.
 - Endpunkte `GET /api/adressen/vorschlaege`, `POST /api/projekte`, `GET /api/projekte/{id}/umfeld`; Comps kommen aus dem Umkreis.
 - Frontend: Combobox mit Debounce/Abbruch, Projektanlage per Auswahl, Umfeld-Karte, ehrlicher Leerzustand ohne Marktdaten.
 - Demo-Comps nur bei Demo-Projekten; echte Adressen starten mit eingeschalteten Ebenen ÖPNV und Nahversorgung.

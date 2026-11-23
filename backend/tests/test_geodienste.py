@@ -2,13 +2,14 @@
 import asyncio
 import datetime as dt
 import itertools
+import json
 import threading
 import time
 
 import httpx
 import pytest
 import respx
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 from mietmarkt.db import engine
 from mietmarkt.geo import cache, dienste
@@ -21,11 +22,13 @@ from mietmarkt.geo.dienste import (
     vorschlaege,
     wegezeiten,
 )
-from mietmarkt.geo.umfeld import umfeld
-from mietmarkt.modelle import GeoCache
+from mietmarkt.geo.umfeld import umfeld, umfeld_fuer_projekt
+from mietmarkt.konfig import Konfig
+from mietmarkt.modelle import GeoCache, Projekt, UmfeldCache
 
 PHOTON = {"features": [{"geometry": {"coordinates": [9.4881, 51.3116]}, "properties": {
     "street": "Lindenallee", "housenumber": "10", "postcode": "12345", "city": "Musterstadt", "district": "Mitte"}}]}
+OVERPASS = Konfig().overpass_urls  # wie zur Laufzeit, also inkl. Einträgen aus .env
 NOMINATIM_SUCHE = [{"lat": "51.3116", "lon": "9.4881", "address": {
     "road": "Lindenallee", "house_number": "10", "postcode": "12345", "city": "Musterstadt", "suburb": "Mitte"}}]
 
@@ -123,7 +126,7 @@ def test_overpass_kategorien_im_radius(s):
         {"type": "way", "center": {"lat": 51.313, "lon": 9.482}, "tags": {"shop": "supermarket", "name": "Markt"}},
         {"type": "node", "lat": 51.314, "lon": 9.483, "tags": {"amenity": "kindergarten"}},
     ]
-    route = respx.post(dienste.OVERPASS_URL).mock(return_value=httpx.Response(200, json={"elements": elemente}))
+    route = respx.post(url__regex=r"/api/interpreter$").mock(return_value=httpx.Response(200, json={"elements": elemente}))
     pois = asyncio.run(umfeld_pois(51.3116, 9.4881, s))
     assert [(p.kategorie, p.name) for p in pois] == [("ÖPNV", "Lindenplatz"), ("Supermarkt", "Markt"), ("Kita", "Kita")]
     assert "around:1000" in route.calls[0].request.content.decode().replace("%3A", ":")
@@ -149,12 +152,99 @@ def test_dienstausfall_wird_gemeldet(s):
 
 
 @respx.mock
-def test_overpass_hat_keinen_rueckfall_server(s):
-    """S5: Fällt Overpass aus, gehen die Koordinaten an keinen weiteren Server, sondern es gibt DienstNichtErreichbar."""
-    route = respx.post(dienste.OVERPASS_URL).mock(return_value=httpx.Response(504))
+def test_overpass_rueckfall_auf_zweiten_server_und_quelle_nennt_ihn(s, monkeypatch):
+    """Ist ein Ersatzserver eingetragen und fällt der erste aus, fragt der Code den zweiten (je Server höchstens
+    25 s); der Rechenweg der Luftlinie (und damit die Fußnote) nennt den Server, der tatsächlich geantwortet hat."""
+    erster, zweiter = "https://overpass-api.de/api/interpreter", "https://ersatz.example/api/interpreter"
+    monkeypatch.setenv("OVERPASS_URLS", json.dumps([erster, zweiter]))
+    a = respx.post(erster).mock(return_value=httpx.Response(504))
+    b = respx.post(zweiter).mock(return_value=httpx.Response(200, json={"elements": [
+        {"type": "node", "lat": 51.3130, "lon": 9.4800, "tags": {"highway": "bus_stop", "name": "Lindenplatz"}}]}))
+    respx.get(url__startswith="https://routing.openstreetmap.de").mock(return_value=httpx.Response(503))
+    poi = asyncio.run(umfeld(51.3116, 9.4881, s)).pois[0]
+    assert (a.call_count, b.call_count) == (1, 1)
+    assert a.calls[0].request.extensions["timeout"]["read"] == 25
+    assert f"über {httpx.URL(zweiter).host}" in poi.luftlinie.rechenweg_text
+    assert httpx.URL(erster).host not in poi.luftlinie.rechenweg_text
+
+
+def test_standardmaessig_kein_ersatzserver():
+    """Ohne Eintrag in .env fragt die App nur overpass-api.de; ein Ersatzserver kommt nur auf Wunsch dazu."""
+    assert Konfig(_env_file=None).overpass_urls == ["https://overpass-api.de/api/interpreter"]
+
+
+def projekt_in(s: Session) -> Projekt:
+    """Legt ein Projekt in Musterstadt an. Eingabe: Sitzung. Ausgabe: gespeichertes Projekt."""
+    p = Projekt(name="Test", adresse="Lindenallee 10", plz="12345", ort="Musterstadt", lat=51.3116, lon=9.4881,
+                stichtag=dt.date(2026, 11, 4), analysiert_am=dt.date(2026, 11, 4))
+    s.add(p)
+    s.commit()
+    return p
+
+
+def altern(s: Session, p: Projekt, tage: int) -> None:
+    """Macht den Umfeld-Eintrag des Projekts älter und leert den Anfrage-Cache, damit nur der Projekt-Cache
+    greifen kann. Eingabe: Sitzung, Projekt, Tage. Ausgabe: keine."""
+    eintrag = s.get(UmfeldCache, p.id)
+    eintrag.abgerufen_am -= dt.timedelta(days=tage)
+    s.add(eintrag)
+    s.exec(delete(GeoCache))
+    s.commit()
+
+
+def umfeld_mocken() -> respx.Route:
+    """Overpass liefert eine Haltestelle, OSRM fällt aus (Luftlinie). Ausgabe: Overpass-Route zum Zählen."""
+    respx.get(url__startswith="https://routing.openstreetmap.de").mock(return_value=httpx.Response(503))
+    return respx.post(url__regex=r"/api/interpreter$").mock(return_value=httpx.Response(200, json={"elements": [
+        {"type": "node", "lat": 51.3130, "lon": 9.4800, "tags": {"highway": "bus_stop", "name": "Lindenplatz"}}]}))
+
+
+@respx.mock
+def test_umfeld_je_projekt_aus_der_datenbank(s):
+    """Ein erfolgreiches Umfeld liegt je Projekt in der Datenbank; nach 29 Tagen kommt es noch von dort, ohne
+    Anfrage nach außen, und die Fußnote nennt weiter das ursprüngliche Abrufdatum."""
+    route = umfeld_mocken()
+    p = projekt_in(s)
+    erst = asyncio.run(umfeld_fuer_projekt(p, s))
+    altern(s, p, 29)
+    zweit = asyncio.run(umfeld_fuer_projekt(p, s))
+    assert route.call_count == 1 and zweit == erst
+    assert erst.abgerufen_am == dt.date.today()
+    assert f"abgerufen am {dt.date.today():%d.%m.%Y}" in zweit.pois[0].luftlinie.rechenweg_text
+
+
+@respx.mock
+def test_umfeld_cache_veraltet_oder_verschoben_wird_neu_geholt(s):
+    """Älter als 30 Tage oder andere Koordinaten: das Umfeld wird neu abgerufen."""
+    route = umfeld_mocken()
+    p = projekt_in(s)
+    asyncio.run(umfeld_fuer_projekt(p, s))
+    altern(s, p, 31)
+    asyncio.run(umfeld_fuer_projekt(p, s))
+    assert route.call_count == 2
+    altern(s, p, 0)
+    p.lat += 0.01
+    asyncio.run(umfeld_fuer_projekt(p, s))
+    assert route.call_count == 3
+
+
+@respx.mock
+def test_umfeld_ausfall_wird_nicht_gespeichert(s):
+    """Fällt Overpass aus, bleibt der Projekt-Cache leer (ein Ausfall soll nicht 30 Tage gelten)."""
+    respx.post(url__regex=r"/api/interpreter$").mock(return_value=httpx.Response(504))
+    p = projekt_in(s)
+    with pytest.raises(DienstNichtErreichbar):
+        asyncio.run(umfeld_fuer_projekt(p, s))
+    assert s.get(UmfeldCache, p.id) is None
+
+
+@respx.mock
+def test_overpass_alle_server_aus_ist_dienst_nicht_erreichbar(s):
+    """Antwortet kein Overpass-Server, gibt es DienstNichtErreichbar; jeder Server wird genau einmal gefragt."""
+    routen = [respx.post(u).mock(return_value=httpx.Response(504)) for u in OVERPASS]
     with pytest.raises(DienstNichtErreichbar):
         asyncio.run(umfeld_pois(51.3116, 9.4881, s))
-    assert route.call_count == 1 and len(respx.calls) == 1
+    assert [r.call_count for r in routen] == [1] * len(OVERPASS) and len(respx.calls) == len(OVERPASS)
 
 
 @respx.mock
@@ -178,7 +268,7 @@ def test_gleichzeitige_gleiche_anfragen_sind_ein_aufruf(s):
 @respx.mock
 def test_overpass_abbruch_mit_status_200_wird_nicht_gecacht(s):
     """P3: Meldet Overpass einen Laufzeitfehler mit HTTP 200, gilt das als Ausfall und landet nicht im Cache."""
-    respx.post(dienste.OVERPASS_URL).mock(return_value=httpx.Response(200, json={
+    respx.post(url__regex=r"/api/interpreter$").mock(return_value=httpx.Response(200, json={
         "elements": [], "remark": "runtime error: Query timed out in query at line 1 after 26 seconds."}))
     with pytest.raises(DienstNichtErreichbar):
         asyncio.run(umfeld_pois(51.3116, 9.4881, s))
@@ -247,7 +337,7 @@ def test_drossel_gilt_ueber_threads_und_ereignisschleifen():
 @respx.mock
 def test_wegezeit_nennt_das_abrufdatum(s):
     """P7: Eine Wegezeit aus dem Cache nennt im Rechenweg, wann OSRM sie geliefert hat."""
-    respx.post(dienste.OVERPASS_URL).mock(return_value=httpx.Response(200, json={"elements": [
+    respx.post(url__regex=r"/api/interpreter$").mock(return_value=httpx.Response(200, json={"elements": [
         {"type": "node", "lat": 51.3130, "lon": 9.4800, "tags": {"highway": "bus_stop", "name": "Lindenplatz"}}]}))
     respx.get(url__startswith=dienste.ROUTING_URL["fuss"]).mock(
         return_value=httpx.Response(200, json={"code": "Ok", "durations": [[0, 120.0]], "distances": [[0, 150.0]]}))
