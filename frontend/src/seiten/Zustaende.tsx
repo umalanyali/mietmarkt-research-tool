@@ -1,7 +1,16 @@
-// Zustandsübersicht: zeigt, wie Karte, Tabellen und Agenten bei Laden, Leere, Fehler und Teildaten aussehen.
+// Zustandsübersicht: zeigt, wie Karte, Tabellen und Agenten bei Laden, Leere, Fehler und Teildaten aussehen,
+// dazu Freigabe- und Ergebniskarte aus einem aufgezeichneten Fake-Lauf (für Responsive-Prüfung und Screenshots).
+import { useEffect, useState } from "react";
 import { Karte } from "../komponenten/Karte";
-import { FehlerZustand, LadeZeilen, LeerZustand } from "../komponenten/Bausteine";
+import { FehlerZustand, FreigabeKarte, LadeZeilen, LeerZustand } from "../komponenten/Bausteine";
+import { Ergebniskarte } from "../komponenten/Ergebniskarte";
 import { Kopf } from "../komponenten/Gestell";
+import { LEER as LAUF_LEER, verarbeite, type Ereignis, type LaufZustand } from "../lauf";
+
+// Begründung, wie der Mietansatz-Agent sie oft schreibt: fett und mit Tabelle (Markdown)
+const BEGRUENDUNG = "**Vorschlag:** Basis aus den Regelgeschoss-Comps, Zuschlag für den besseren Energiestandard.\n\n" +
+  "| Basis | Comps | Median €/m² | Zu-/Abschlag | Ansatz €/m² | Fortgeschrieben €/m² |\n|---|---|---|---|---|---|\n" +
+  "| Regelgeschoss/EG | 12 | 16,96 | +0,30 | 17,26 | 17,55 |\n| Dachgeschoss | 4 | 17,80 | 0,00 | 17,80 | 18,10 |";
 
 // Leere Kartenebenen für die Zustandsübersicht; die Karte selbst wird bei erzwungenem Zustand nicht geladen
 const LEER = { projekte: [], oepnv: [], nahversorgung: [] };
@@ -9,6 +18,15 @@ const ORT = { lat: 0, lon: 0, name: "" };
 
 /** Übersicht der Lade-, Leer-, Fehler- und Teildaten-Zustände. Eingabe: keine. Ausgabe: Seite. */
 export function Zustaende() {
+  // Aufzeichnung erst bei Bedarf laden: 60 KB, die das Haupt-Bundle nicht braucht
+  const [lauf, setLauf] = useState<{ vorschlag: Ereignis["vorschlag"]; ende: LaufZustand } | null>(null);
+  useEffect(() => {
+    import("../test/aufzeichnung.json").then(({ default: a }) => {
+      const bis = a.bis_freigabe as Ereignis[];
+      setLauf({ vorschlag: { ...bis.at(-1)!.vorschlag, begruendung: BEGRUENDUNG },
+                ende: [...bis, ...(a.nach_freigabe as Ereignis[])].reduce((z, e) => verarbeite(z, e, 0), LAUF_LEER) });
+    });
+  }, []);
   return (
     <div className="app">
       <Kopf />
@@ -31,6 +49,12 @@ export function Zustaende() {
             </figure>
           ))}
         </div>
+        {lauf && (
+          <div className="d-zustand-lauf">
+            <FreigabeKarte vorschlag={lauf.vorschlag} onSenden={() => {}} sendet={false} />
+            <Ergebniskarte laufId="beispiel" zustand={lauf.ende} />
+          </div>
+        )}
       </main>
     </div>
   );

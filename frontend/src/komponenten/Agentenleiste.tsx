@@ -113,7 +113,7 @@ export function Agentenleiste({ lauf, laeufe, ki }: { lauf: ReturnType<typeof us
         {offen && (
           <>
             {z.schritte.length > 0 && (
-              <table className="e-tabelle d-agenten-tabelle">
+              <div className="e-tabelle-scroll"><table className="e-tabelle d-agenten-tabelle">
                 <thead>
                   <tr>
                     <th scope="col">Agent</th>
@@ -148,7 +148,7 @@ export function Agentenleiste({ lauf, laeufe, ki }: { lauf: ReturnType<typeof us
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
             <h3 className="d-klein d-leise">Läufe dieses Projekts</h3>
             {liste.length === 0 ? (

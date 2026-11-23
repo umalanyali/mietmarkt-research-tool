@@ -259,6 +259,10 @@ export function useLauf(projektId: number, nachEnde: () => void) {
     oeffnen,
     freigeben: (f: Freigabe) => senden("freigabe", f),
     antworten: (antwort: string) => senden("antwort", { antwort }),
-    berichtNeu: () => streamen(fetch(`/api/laeufe/${laufId}/bericht`, { method: "POST" })),
+    // Leer beginnen wie beim Öffnen: der Server schickt zuerst die bisherigen Kosten, sonst zählten sie doppelt
+    berichtNeu: () => {
+      setZustand(LEER);
+      return streamen(fetch(`/api/laeufe/${laufId}/bericht`, { method: "POST" }));
+    },
   };
 }

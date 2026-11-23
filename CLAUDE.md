@@ -32,3 +32,5 @@ Privates Portfolio-Tool für Neubau-Mietmarktanalysen.
 - Frontend-Tests: `cd frontend && npm test && npx tsc --noEmit`
 - Demo-Daten laden: `cd backend && .venv/bin/python -m mietmarkt.demo seed`
 - Screenshots: `cd frontend && node skripte/aufnahme.mjs <ordner> name=/pfad` (App muss laufen)
+- Responsive-Prüfung: `cd frontend && node skripte/responsive.mjs` (App muss laufen; 375/768/1280/1440 px, Screenshots nach `docs/screenshots/responsive/`)
+- Server-Log: `daten/logs/backend.log` (rotierend, Schlüssel unkenntlich)

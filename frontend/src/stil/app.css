@@ -307,3 +307,20 @@
 .d-bericht { border-top: 1px solid var(--linie); padding-top: var(--s4); display: grid; gap: var(--s4); max-width: 80ch; }
 .d-bericht p { white-space: pre-line; line-height: 1.55; }
 .d-fussnoten { list-style: none; padding: 0; font-size: var(--t-12); color: var(--text-leise); display: grid; gap: 2px; }
+
+/* Breite Tabellen scrollen in sich selbst, nie die ganze Seite */
+/* position: relative, damit auch absolut gesetzte Screenreader-Texte (.e-sr) darin bleiben und nicht die Seite verbreitern */
+.e-tabelle-scroll, .e-tabelle-rahmen { overflow-x: auto; max-width: 100%; position: relative; }
+
+/* Handy und kleines Tablet: eine Spalte, 16 px Seitenrand, Kopfzeile und Pills brechen um */
+@media (max-width: 767px) {
+  :root { --s7: 16px; }
+  .d-spalten, .d-ohne-daten, .d-zuletzt-karten, .d-zustand-raster { grid-template-columns: minmax(0, 1fr); }
+  .d-spalten > :nth-child(2) { grid-column: auto; }
+  .d-spalten > *, .d-ohne-daten > * { min-width: 0; }
+  .d-kopf, .d-balken { flex-wrap: wrap; height: auto; min-height: 64px; }
+  .app .e-freigabe-aktionen { flex-wrap: wrap; }
+  .d-ergebnis-knoepfe > *, .e-freigabe-aktionen > button { flex: 1 1 100%; min-height: 44px; justify-content: center; }
+  .app .e-freigabe-vorschlag > div { flex-direction: column; gap: 2px; }
+  .e-freigabe input, .e-freigabe textarea { width: 100%; min-height: 44px; }
+}

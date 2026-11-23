@@ -19,9 +19,20 @@ describe("Freigabe-Karte", () => {
     karte();
     expect(screen.getByText("Mietansatz übernehmen?")).toBeInTheDocument();
     expect(screen.getByText(/17,26 €\/m²/, { selector: "dd" })).toBeInTheDocument();
-    expect(screen.getByText(vorschlag.begruendung)).toBeInTheDocument();
+    expect(document.querySelector(".e-freigabe-grund")).toHaveTextContent(vorschlag.begruendung.replace(/\*\*/g, ""));
     expect(screen.getByRole("list", { name: "Herleitung Regelgeschoss/EG" })).toHaveTextContent("Energiestandard");
     expect(screen.getByText("+0,30 €/m²", { exact: false })).toBeInTheDocument();
+  });
+
+  it("rendert die Begründung als Markdown: fett, Tabelle (scrollt in sich), kein rohes HTML", () => {
+    const begruendung = "**Vorschlag:** zwei Basen.\n\n| Basis | €/m² |\n|---|---|\n| Regel | 17,26 |\n\n<img src=x onerror=alert(1)>";
+    render(<FreigabeKarte vorschlag={{ ...vorschlag, begruendung }} onSenden={vi.fn()} sendet={false} />);
+    expect(screen.getByText("Vorschlag:").tagName).toBe("STRONG");
+    const tabelle = screen.getByRole("table");
+    expect(tabelle).toHaveTextContent("Regel17,26");
+    expect(tabelle.parentElement).toHaveClass("e-tabelle-scroll");
+    expect(document.querySelector(".e-freigabe-grund img")).toBeNull();
+    expect(screen.queryByText(/\*\*/)).toBeNull();
   });
 
   it("nimmt an, mit optionalem Kommentar", () => {

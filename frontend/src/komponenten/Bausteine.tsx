@@ -2,6 +2,7 @@
  * Wiederverwendbare Bausteine des Dashboards: Comps- und Angebotstabelle, Freigabe-Karte, Herleitungskette, Zustände.
  * Struktur und Verhalten stehen hier, das Aussehen in stil/app.css (Klassen mit Präfix „e-“).
  */
+import { Markdown } from "./Markdown";
 import { useState } from "react";
 import { de, ganz } from "../format";
 import type { Comp, Marktkennzahl, Wert } from "../api";
@@ -46,7 +47,7 @@ interface CompsProps {
 export function CompsTabelle({ comps, gemerkt, onStern, ausgewaehlt, onAuswahl }: CompsProps) {
   return (
     <div className="e-tabelle-rahmen">
-      <table className="e-tabelle e-comps">
+      <div className="e-tabelle-scroll"><table className="e-tabelle e-comps">
         <thead>
           <tr>
             <th className="z" scope="col">#</th>
@@ -105,7 +106,7 @@ export function CompsTabelle({ comps, gemerkt, onStern, ausgewaehlt, onAuswahl }
             );
           })}
         </tbody>
-      </table>
+      </table></div>
     </div>
   );
 }
@@ -122,7 +123,7 @@ export function AngebotTabelle({ werte }: { werte: Marktkennzahl[] }) {
   const zeilen = [...new Set(werte.map((w) => w.kategorie))];
   const zelle = (zeile: string, spalte: string) => werte.find((w) => w.kategorie === zeile && w.bezeichnung === spalte);
   return (
-    <table className="e-tabelle e-angebot">
+    <div className="e-tabelle-scroll"><table className="e-tabelle e-angebot">
       <thead>
         <tr>
           <th scope="col">Zi.</th>
@@ -149,7 +150,7 @@ export function AngebotTabelle({ werte }: { werte: Marktkennzahl[] }) {
           </tr>
         ))}
       </tbody>
-    </table>
+    </table></div>
   );
 }
 
@@ -221,7 +222,7 @@ export function FreigabeKarte({ vorschlag, onSenden, sendet }: { vorschlag: { he
           );
         })}
       </dl>
-      <p className="e-freigabe-grund">{vorschlag.begruendung}</p>
+      <Markdown className="e-freigabe-grund" text={vorschlag.begruendung} />
       <Herleitung herleitungen={vorschlag.herleitungen} />
       {aendern && (
         <div className="e-freigabe-aendern">

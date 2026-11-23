@@ -100,6 +100,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
   const k = kennzahlen.kennzahlen;
   const quelle = (id: number | null) => kennzahlen.quellen.find((q) => q.id === id);
   const dateiQuellen = projekt.quellen.filter((q) => q.art === "datei");
+  const standText = [`Stichtag ${datum(projekt.stichtag)}`, ...dateiQuellen.map((q) => `${q.name} ${q.stand}`)].join(" · ");
   const angebotQuelle = projekt.quellen.find((q) => q.name === "Angebotsstatistik");
   // Soziodemografie: Wert im Ortsteil, darunter der Vergleichswert der Stadt
   const sozio = gruppe(k, "soziodemografie").filter((x) => x.gebiet !== "Stadt");
@@ -203,9 +204,10 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
         </span>
         <span className="d-chip">Umkreis 2 km</span>
         <span className="d-chip">Miete</span>
-        <span className="d-leiste-stand">
+        {/* Quellen nur gezählt, sonst wird die Zeile mehrere tausend Pixel breit; voller Text im Tooltip */}
+        <span className="d-leiste-stand" title={standText} aria-label={standText}>
           Stichtag {datum(projekt.stichtag)}
-          {dateiQuellen.map((q) => ` · ${q.name} ${q.stand}`).join("")}
+          {dateiQuellen.length > 0 && ` · ${dateiQuellen.length} ${dateiQuellen.length === 1 ? "Quelle" : "Quellen"}`}
         </span>
       </div>
 

@@ -59,10 +59,13 @@ def test_lauf_starten_und_ereignisse_streamen(client):
 
 
 def test_beendeter_lauf_liefert_nur_das_ergebnis(client):
-    """Ein zweiter Abruf eines fertigen Laufs startet nichts neu, sondern meldet nur den Endstand aus dem Checkpoint."""
+    """Ein zweiter Abruf eines fertigen Laufs startet nichts neu, sondern meldet seine Kosten je Aufruf und den
+    Endstand aus der Tabelle lauf."""
     lauf_id = client.post("/api/projekte/1/laeufe").json()["lauf_id"]
-    client.get(f"/api/laeufe/{lauf_id}/ereignisse")
-    assert [e["typ"] for e in ereignisse(client.get(f"/api/laeufe/{lauf_id}/ereignisse"))] == ["fertig"]
+    erst = ereignisse(client.get(f"/api/laeufe/{lauf_id}/ereignisse"))
+    nochmal = ereignisse(client.get(f"/api/laeufe/{lauf_id}/ereignisse"))
+    kosten = [e for e in erst if e["typ"] == "kosten"]
+    assert nochmal[:-1] == kosten and nochmal[-1]["typ"] == "fertig" and len(kosten) > 1
 
 
 def test_unbekannter_lauf_und_projekt_sind_404(client):
@@ -126,7 +129,7 @@ def test_fertiger_lauf_braucht_keinen_schluessel_und_raeumt_auf(client, tmp_path
     main.app.dependency_overrides[main.konfig] = lambda: Konfig(_env_file=None, anthropic_api_key=None)
     main.app.dependency_overrides[main.ki_modelle] = lambda: None
     ende = ereignisse(client.get(f"/api/laeufe/{lauf_id}/ereignisse"))
-    assert [e["typ"] for e in ende] == ["fertig"] and ende[0]["ergebnisse"]["marktdaten"]["text"]
+    assert {e["typ"] for e in ende[:-1]} == {"kosten"} and ende[-1]["ergebnisse"]["marktdaten"]["text"]
 
 
 def test_fehlermeldung_ohne_interna(client):
@@ -199,6 +202,18 @@ def test_bericht_neu_ohne_agenten_erneut_zu_bezahlen(client, mit_freigabe):
     anderer = client.post("/api/projekte/1/laeufe").json()["lauf_id"]  # Skript am Ende: scheitert vor dem Bericht
     client.get(f"/api/laeufe/{anderer}/ereignisse")
     assert client.post(f"/api/laeufe/{anderer}/bericht").status_code == 409
+
+
+def test_pausierter_lauf_meldet_bisherige_kosten(client, mit_freigabe):
+    """Öffnet man einen pausierten Lauf neu (leere Agentenleiste), kommen zuerst seine bisherigen Kosten aus dem
+    Checkpoint; die Fortsetzung per Freigabe wiederholt sie nicht (sonst zählte der Browser doppelt)."""
+    lauf_id = client.post("/api/projekte/1/laeufe").json()["lauf_id"]
+    erst = [e for e in ereignisse(client.get(f"/api/laeufe/{lauf_id}/ereignisse")) if e["typ"] == "kosten"]
+    wieder = ereignisse(client.get(f"/api/laeufe/{lauf_id}/ereignisse"))
+    assert [e["typ"] for e in wieder] == ["kosten"] * len(erst) + ["wartet_auf_freigabe"] and wieder[:-1] == erst
+    weiter = [e["agent"] for e in ereignisse(client.post(f"/api/laeufe/{lauf_id}/freigabe", json={"aktion": "annehmen"}))
+              if e["typ"] == "kosten"]
+    assert weiter == ["pruefung", "bericht"]
 
 
 def test_bericht_export_markdown_und_pptx(client, mit_freigabe):

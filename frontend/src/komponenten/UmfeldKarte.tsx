@@ -40,7 +40,7 @@ export function UmfeldKarte({ umfeld, nochmal }: { umfeld: Ladezustand<Umfeld>; 
       )}
       {umfeld.status === "bereit" && umfeld.daten.pois.length > 0 && (
         <>
-          <table className="e-tabelle e-umfeld">
+          <div className="e-tabelle-scroll"><table className="e-tabelle e-umfeld">
             <thead>
               <tr>
                 <th scope="col">Kategorie</th>
@@ -63,7 +63,7 @@ export function UmfeldKarte({ umfeld, nochmal }: { umfeld: Ladezustand<Umfeld>; 
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
           <p className="d-fuss">Daten {umfeld.daten.attribution} · Wegezeiten: OSRM (routing.openstreetmap.de)</p>
         </>
       )}

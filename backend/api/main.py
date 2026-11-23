@@ -3,8 +3,11 @@ import asyncio
 import datetime as dt
 import json
 import logging
+import re
 import uuid
 from collections.abc import AsyncIterator, Iterator
+from contextlib import asynccontextmanager
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Annotated, Literal
 from urllib.parse import urlsplit
@@ -65,7 +68,38 @@ from mietmarkt.kennzahlen import (
 from mietmarkt.konfig import Konfig
 from mietmarkt.modelle import CompBasis, Dokument, Lauf, Marktkennzahl, Projekt, ProjektBasis, Quelle, Wert
 
-app = FastAPI(title="Mietmarkt Research", version=__version__)
+
+class OhneSchluessel(logging.Formatter):
+    """Formatiert Logzeilen samt Traceback und macht Anthropic-Schlüssel (sk-ant-…) unkenntlich (CLAUDE.md Regel 4)."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        """Eingabe: Logeintrag. Ausgabe: fertige Zeile ohne Schlüssel."""
+        return re.sub(r"sk-ant-[\w-]+", "sk-ant-***", super().format(record))
+
+
+def protokoll_einrichten(datei: Path) -> logging.Handler:
+    """Schreibt das Server-Log zusätzlich in eine rotierende Datei (1 MB, 3 ältere Dateien).
+
+    Eingabe: Pfad der Logdatei. Ausgabe: der Handler. Hängt an root, „uvicorn“ (Ausnahmen) und „uvicorn.access“
+    (Zugriffe mit Status), denn uvicorn gibt die beiden nicht an root weiter.
+    """
+    datei.parent.mkdir(parents=True, exist_ok=True)
+    h = RotatingFileHandler(datei, maxBytes=1_000_000, backupCount=3, encoding="utf-8")
+    h.setFormatter(OhneSchluessel("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    for name in ("", "uvicorn", "uvicorn.access"):
+        logging.getLogger(name).addHandler(h)
+    logging.getLogger().setLevel(logging.INFO)  # auch httpx-Anfragen an Geodienste (Status je Aufruf, ohne Header)
+    return h
+
+
+@asynccontextmanager
+async def lebenszyklus(_: FastAPI) -> AsyncIterator[None]:
+    """Beim Serverstart: Log-Datei daten/logs/backend.log einrichten. Ausgabe: keine (Kontext für FastAPI)."""
+    protokoll_einrichten(datenbankpfad().parent / "logs" / "backend.log")
+    yield
+
+
+app = FastAPI(title="Mietmarkt Research", version=__version__, lifespan=lebenszyklus)
 # Nur Anfragen an localhost: schützt vor DNS-Rebinding (eine fremde Domain, die auf 127.0.0.1 zeigt)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])
 
@@ -450,6 +484,9 @@ def _ausfuehren(lauf: Lauf, e, k: Konfig, m: Modelle, pfad: Path, fortsetzung: C
                 # stand.values leer: noch nie gelaufen; stand.next nicht leer: unterbrochen oder angehalten
                 if fortsetzung or not stand.values or stand.next:
                     eingabe = fortsetzung or (None if stand.values else startzustand(projekt_id))
+                    if not fortsetzung:  # neu geöffnet (leere Agentenleiste): erst die bisherigen Kosten je Aufruf
+                        for k_ in stand.values.get("kosten", []):
+                            yield _sse({"typ": "kosten", **k_})
                     try:
                         async for modus, daten in graph.astream(eingabe, konf, stream_mode=["updates", "messages"]):
                             for ereignis in ereignisse(modus, daten):
@@ -505,8 +542,10 @@ async def lauf_ereignisse(lauf_id: str, s: Sitzung, k: KonfigDep, m: ModelleDep,
     Schlüssel). 404 unbekannt, 503 ohne KI, 409 läuft schon.
     """
     lauf = _lauf(s, lauf_id)
-    if lauf.ergebnis:
-        return StreamingResponse(iter([_sse(json.loads(lauf.ergebnis))]), media_type="text/event-stream")
+    if lauf.ergebnis:  # Kosten je Aufruf (fehlen bei Läufen vor 11/2026), dann der Endstand
+        ende = json.loads(lauf.ergebnis)
+        bloecke = [_sse({"typ": "kosten", **k_}) for k_ in ende.get("kosten", [])] + [_sse(ende)]
+        return StreamingResponse(iter(bloecke), media_type="text/event-stream")
     if m is None:
         raise HTTPException(status_code=503, detail=k.ki_problem)
     return _ausfuehren(lauf, s.get_bind(), k, m, pfad, None)

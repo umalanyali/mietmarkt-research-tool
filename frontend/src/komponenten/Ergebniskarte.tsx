@@ -112,7 +112,7 @@ export function Ergebniskarte({ laufId, zustand, onBerichtNeu }: { laufId: strin
         <div>
           <h4>Freigegebener Mietansatz</h4>
           {zustand.herleitungen ? (
-            <table className="e-tabelle" aria-label="Freigegebener Mietansatz">
+            <div className="e-tabelle-scroll"><table className="e-tabelle" aria-label="Freigegebener Mietansatz">
               <thead>
                 <tr>
                   <th scope="col">Basis</th>
@@ -144,7 +144,7 @@ export function Ergebniskarte({ laufId, zustand, onBerichtNeu }: { laufId: strin
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
           ) : (
             <p className="d-leise">Kein freigegebener Mietansatz.</p>
           )}
