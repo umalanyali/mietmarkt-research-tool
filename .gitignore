@@ -22,3 +22,5 @@ frontend/dist/
 # System
 .DS_Store
 .claude/settings.local.json
+CLAUDE.local.md
+graphify-out/

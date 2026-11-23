@@ -429,7 +429,7 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
         """
         if grund := budget_erschoepft(z):
             return {"abbruch": grund}
-        if len(z["entscheidungen"]) >= MAX_RUNDEN:  # vor dem Aufruf prüfen: die siebte Runde wird nicht bezahlt
+        if len(z["entscheidungen"]) >= MAX_RUNDEN:  # vor dem Aufruf prüfen: die Entscheidung über das Limit hinaus wird nicht bezahlt
             schluss = Entscheidung(naechster="fertig", auftrag="", begruendung=f"Leitplanke: höchstens {MAX_RUNDEN} Runden")
             # Als Abbruch melden: der Lauf endet ohne Bericht und darf nicht wie ein Erfolg aussehen (P8)
             return {"entscheidungen": [schluss.model_dump() | {"markierungen": []}], "aktiver_agent": None,
