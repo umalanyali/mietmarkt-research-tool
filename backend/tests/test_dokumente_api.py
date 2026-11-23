@@ -93,3 +93,29 @@ def test_unbekanntes_projekt_404(umgebung):
     """Hochladen in ein fehlendes Projekt ergibt 404."""
     client, _ = umgebung
     assert hochladen(client, "a.txt", b"Text", projekt=999).status_code == 404
+
+
+def test_expose_pdf_wird_beim_upload_ohne_ki_ausgelesen(umgebung):
+    """PDF: Der Parser liest die Felder sofort (Herkunft import, Seite, Zitat); nicht Gefundenes bleibt leer.
+    Bilder und Texte bekommen keine Exposé-Auswertung."""
+    client, _ = umgebung
+    d = hochladen(client, "expose.pdf", pdf(["Wohnfläche: 72,5 m², Kaltmiete 1.250 €", "3 Zimmer, Balkon"])).json()
+    f = d["expose"]["felder"]
+    assert (f["wohnflaeche"]["wert"], f["kaltmiete"]["wert"], f["zimmer"]["wert"]) == (72.5, 1250, 3)
+    assert f["zimmer"]["herkunft"] == "import" and f["zimmer"]["fundstelle"] == "S. 2"
+    assert "expose.pdf, S. 1" in f["kaltmiete"]["rechenweg_text"] and f["baujahr"] is None
+    assert d["expose"]["ausstattung"] == [{"merkmal": "Balkon", "fundstelle": "S. 2", "herkunft": "import"}]
+    assert hochladen(client, "bild.png", png()).json()["expose"] is None
+    assert hochladen(client, "notiz.txt", b"Kaltmiete 900 EUR").json()["expose"] is None
+
+
+def test_suche_in_unterlagen_findet_datei_seite_und_ausschnitt(umgebung):
+    """GET …/dokumente/suche durchsucht alle Unterlagen des Projekts (lokal, auch ohne KI-Freigabe)."""
+    client, _ = umgebung
+    hochladen(client, "a.pdf", pdf(["Nichts", "Wallbox in der Tiefgarage"]))
+    hochladen(client, "andere.txt", b"Wallbox", projekt=2)
+    treffer = client.get("/api/projekte/1/dokumente/suche", params={"q": "Wallbox"}).json()
+    assert treffer == [{"datei": "a.pdf", "seite": 2, "ausschnitt": "Wallbox in der Tiefgarage"}]
+    assert client.get("/api/projekte/1/dokumente/suche", params={"q": "Sauna"}).json() == []
+    assert client.get("/api/projekte/1/dokumente/suche", params={"q": "x"}).status_code == 422
+    assert client.get("/api/projekte/999/dokumente/suche", params={"q": "Wallbox"}).status_code == 404

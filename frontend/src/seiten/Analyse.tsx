@@ -10,6 +10,7 @@ import { Saeulen, Zeitreihe } from "../komponenten/Diagramme";
 import { SucheSymbol } from "../komponenten/Symbole";
 import { Karte, EBENEN, type Ebene } from "../komponenten/Karte";
 import { Agentenleiste } from "../komponenten/Agentenleiste";
+import { Ergebniskarte } from "../komponenten/Ergebniskarte";
 import { UmfeldKarte } from "../komponenten/UmfeldKarte";
 import { Kopf, Pills, Vorschlagsliste } from "../komponenten/Gestell";
 import { CompsTabelle, EStern, FehlerZustand, FreigabeKarte, Herleitung, LadeZeilen, LeerZustand, AngebotTabelle } from "../komponenten/Bausteine";
@@ -209,6 +210,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
       </div>
 
       <Agentenleiste lauf={lauf} laeufe={laeufe} ki={gesundheit.status === "bereit" ? gesundheit.daten.ki : null} />
+      {lauf.laufId && lauf.zustand.ende && !lauf.aktiv && <Ergebniskarte laufId={lauf.laufId} zustand={lauf.zustand} />}
 
       {anlage.status !== "ruhig" && anlage.status !== "laden" && (
         <div className="d-hinweis-leiste" role="alert">

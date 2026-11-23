@@ -1,0 +1,51 @@
+gruppe;bezeichnung;kategorie;gebiet;wert;einheit;stellen;herkunft;quelle
+soziodemografie;Einwohner;;Ortsteil Südhang;12840;Einwohner;0;import;Marktbericht
+soziodemografie;Einwohner;;Stadt;204300;Einwohner;0;import;Marktbericht
+soziodemografie;Haushalte;;Ortsteil Südhang;6610;;0;import;Marktbericht
+soziodemografie;Haushalte;;Stadt;108900;;0;import;Marktbericht
+soziodemografie;Ø Personen je HH;;Ortsteil Südhang;1,94;;2;import;Marktbericht
+soziodemografie;Ø Personen je HH;;Stadt;1,88;;2;import;Marktbericht
+soziodemografie;Kaufkraft je Einw.;;Ortsteil Südhang;27400;€;0;import;Marktbericht
+soziodemografie;Kaufkraft je Einw.;;Stadt;25100;€;0;import;Marktbericht
+soziodemografie;Arbeitslosenquote;;Ortsteil Südhang;4,8;%;1;import;Marktbericht
+soziodemografie;Arbeitslosenquote;;Stadt;6,9;%;1;import;Marktbericht
+soziodemografie;Leerstandsquote;;Ortsteil Südhang;1,6;%;1;import;Marktbericht
+soziodemografie;Leerstandsquote;;Stadt;2,3;%;1;import;Marktbericht
+zeitreihe;Median PLZ 99998;Q4/24;PLZ 99998;15,20;€/m²;2;import;Marktbericht
+zeitreihe;Median PLZ 99998;Q1/25;PLZ 99998;15,40;€/m²;2;import;Marktbericht
+zeitreihe;Median PLZ 99998;Q2/25;PLZ 99998;15,50;€/m²;2;import;Marktbericht
+zeitreihe;Median PLZ 99998;Q3/25;PLZ 99998;15,90;€/m²;2;import;Marktbericht
+zeitreihe;Median PLZ 99998;Q4/25;PLZ 99998;16,00;€/m²;2;import;Marktbericht
+zeitreihe;Median PLZ 99998;Q1/26;PLZ 99998;16,20;€/m²;2;import;Marktbericht
+zeitreihe;Median PLZ 99998;Q2/26;PLZ 99998;16,30;€/m²;2;import;Marktbericht
+zeitreihe;Median PLZ 99998;Q3/26;PLZ 99998;16,40;€/m²;2;import;Marktbericht
+zeitreihe;Unteres Quartil;Q4/24;PLZ 99998;13,80;€/m²;2;import;Marktbericht
+zeitreihe;Unteres Quartil;Q1/25;PLZ 99998;13,90;€/m²;2;import;Marktbericht
+zeitreihe;Unteres Quartil;Q2/25;PLZ 99998;14,00;€/m²;2;import;Marktbericht
+zeitreihe;Unteres Quartil;Q3/25;PLZ 99998;14,30;€/m²;2;import;Marktbericht
+zeitreihe;Unteres Quartil;Q4/25;PLZ 99998;14,50;€/m²;2;import;Marktbericht
+zeitreihe;Unteres Quartil;Q1/26;PLZ 99998;14,60;€/m²;2;import;Marktbericht
+zeitreihe;Unteres Quartil;Q2/26;PLZ 99998;14,80;€/m²;2;import;Marktbericht
+zeitreihe;Unteres Quartil;Q3/26;PLZ 99998;14,90;€/m²;2;import;Marktbericht
+zeitreihe;Oberes Quartil;Q4/24;PLZ 99998;16,90;€/m²;2;import;Marktbericht
+zeitreihe;Oberes Quartil;Q1/25;PLZ 99998;17,10;€/m²;2;import;Marktbericht
+zeitreihe;Oberes Quartil;Q2/25;PLZ 99998;17,20;€/m²;2;import;Marktbericht
+zeitreihe;Oberes Quartil;Q3/25;PLZ 99998;17,50;€/m²;2;import;Marktbericht
+zeitreihe;Oberes Quartil;Q4/25;PLZ 99998;17,60;€/m²;2;import;Marktbericht
+zeitreihe;Oberes Quartil;Q1/26;PLZ 99998;17,80;€/m²;2;import;Marktbericht
+zeitreihe;Oberes Quartil;Q2/26;PLZ 99998;18,00;€/m²;2;import;Marktbericht
+zeitreihe;Oberes Quartil;Q3/26;PLZ 99998;18,10;€/m²;2;import;Marktbericht
+preisklassen;Angebote;< 12;PLZ 99998;3;;0;import;Marktbericht
+preisklassen;Angebote;12–13,50;PLZ 99998;5;;0;import;Marktbericht
+preisklassen;Angebote;13,50–15;PLZ 99998;11;;0;import;Marktbericht
+preisklassen;Angebote;15–16,50;PLZ 99998;24;;0;import;Marktbericht
+preisklassen;Angebote;16,50–18;PLZ 99998;31;;0;import;Marktbericht
+preisklassen;Angebote;18–19,50;PLZ 99998;17;;0;import;Marktbericht
+preisklassen;Angebote;19,50–21;PLZ 99998;7;;0;import;Marktbericht
+preisklassen;Angebote;> 21;PLZ 99998;2;;0;import;Marktbericht
+weitere;Einwohner Ortsteil Südhang;;;12840;Einwohner;0;manuell;Statistikamt Musterstadt
+weitere;Baufertigstellungen Wohnungen;2023;Stadt;1105;Wohnungen;0;manuell;Statistisches Landesamt
+weitere;Baufertigstellungen Wohnungen;2024;Stadt;1180;Wohnungen;0;manuell;Statistisches Landesamt
+weitere;Baufertigstellungen Wohnungen;2025;Stadt;1240;Wohnungen;0;manuell;Statistisches Landesamt
+weitere;Mietspiegel Ø Nettokaltmiete;;Stadt;10,20;€/m²;2;manuell;Mietspiegel Musterstadt
+weitere;Mietspiegel Neubau ab 2020, Mittelwert;;Stadt;13,45;€/m²;2;manuell;Mietspiegel Musterstadt

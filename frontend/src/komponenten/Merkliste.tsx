@@ -84,11 +84,12 @@ export function Merkliste({ bausteine, onAenderung, kuerzel }: Props) {
           </SortableContext>
         </DndContext>
       )}
-      <button type="button" className="merkliste-export" disabled={bausteine.length === 0}>
+      {/* Noch ohne Funktion: gesperrt statt stumm, damit niemand auf einen Export wartet, der nicht kommt */}
+      <button type="button" className="merkliste-export" disabled aria-describedby="merkliste-export-hinweis">
         PowerPoint erstellen
       </button>
-      <p className="etikett merkliste-fuss">
-        {folien} Folien · Deck-Prüfung und Quellenzeile vor dem Export
+      <p id="merkliste-export-hinweis" className="etikett merkliste-fuss">
+        {folien} Folien · Export der Merkliste folgt. Den Bericht eines Laufs gibt es als PowerPoint in der Ergebniskarte.
       </p>
     </div>
   );

@@ -133,6 +133,18 @@ export interface DokumentAus {
   seiten: number;
   abschnitte: number;
   ki_freigabe: boolean;
+  /** Exposé-Felder aus dem Parser (nur PDF); null bei Bildern und Texten */
+  expose: {
+    felder: Record<"wohnflaeche" | "kaltmiete" | "zimmer" | "baujahr", Wert | null>;
+    ausstattung: { merkmal: string; fundstelle: string; herkunft: Herkunft }[];
+  } | null;
+}
+
+/** Treffer der Volltextsuche in den Unterlagen. */
+export interface Treffer {
+  datei: string;
+  seite: number;
+  ausschnitt: string;
 }
 
 /** Fehler einer API-Antwort mit HTTP-Status (503 = externer Dienst nicht erreichbar). */
@@ -162,6 +174,11 @@ export async function projektAnlegen(v: Vorschlag): Promise<Projekt> {
 /** Öffnet den Demo-Standort Musterstadt; das Backend legt die Demo-Daten an, falls sie fehlen. Ausgabe: Projekt-ID. */
 export async function demoOeffnen(): Promise<number> {
   return (await json<{ projekt_id: number }>(await fetch("/api/demo", { method: "POST" }))).projekt_id;
+}
+
+/** Sucht in allen Unterlagen eines Projekts. Eingabe: Projekt-ID, Suchtext (ab 2 Zeichen). Ausgabe: Treffer. */
+export async function unterlagenSuchen(projektId: number, q: string): Promise<Treffer[]> {
+  return json<Treffer[]>(await fetch(`/api/projekte/${projektId}/dokumente/suche?q=${encodeURIComponent(q)}`));
 }
 
 /**

@@ -1,0 +1,40 @@
+gruppe;bezeichnung;kategorie;gebiet;wert;einheit;stellen;herkunft;quelle
+angebot;Angebotsmiete Neubau;;Umkreis 2 km;17,60;€/m²;2;import;Angebotsstatistik
+angebot;Veränderung 12 Monate;;Umkreis 2 km;4,1;%;1;import;Angebotsstatistik
+angebot;Vermarktungsdauer;;Umkreis 2 km;31;Tage;0;import;Angebotsstatistik
+angebot;Angebote (12 M.);;Umkreis 2 km;286;;0;import;Angebotsstatistik
+angebot_tabelle;n;1 Zi.;Umkreis 2 km;31;;0;import;Angebotsstatistik
+angebot_tabelle;Ø m²;1 Zi.;Umkreis 2 km;36;m²;0;import;Angebotsstatistik
+angebot_tabelle;Min;1 Zi.;Umkreis 2 km;14,20;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Ø;1 Zi.;Umkreis 2 km;19,10;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Median;1 Zi.;Umkreis 2 km;19,10;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;P75;1 Zi.;Umkreis 2 km;20,30;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Max;1 Zi.;Umkreis 2 km;24,00;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;n;2 Zi.;Umkreis 2 km;104;;0;import;Angebotsstatistik
+angebot_tabelle;Ø m²;2 Zi.;Umkreis 2 km;58;m²;0;import;Angebotsstatistik
+angebot_tabelle;Min;2 Zi.;Umkreis 2 km;13,10;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Ø;2 Zi.;Umkreis 2 km;17,90;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Median;2 Zi.;Umkreis 2 km;17,80;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;P75;2 Zi.;Umkreis 2 km;18,90;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Max;2 Zi.;Umkreis 2 km;22,40;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;n;3 Zi.;Umkreis 2 km;92;;0;import;Angebotsstatistik
+angebot_tabelle;Ø m²;3 Zi.;Umkreis 2 km;79;m²;0;import;Angebotsstatistik
+angebot_tabelle;Min;3 Zi.;Umkreis 2 km;12,60;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Ø;3 Zi.;Umkreis 2 km;17,10;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Median;3 Zi.;Umkreis 2 km;17,00;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;P75;3 Zi.;Umkreis 2 km;18,20;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Max;3 Zi.;Umkreis 2 km;21,00;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;n;4 Zi.;Umkreis 2 km;43;;0;import;Angebotsstatistik
+angebot_tabelle;Ø m²;4 Zi.;Umkreis 2 km;99;m²;0;import;Angebotsstatistik
+angebot_tabelle;Min;4 Zi.;Umkreis 2 km;12,30;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Ø;4 Zi.;Umkreis 2 km;16,60;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Median;4 Zi.;Umkreis 2 km;16,50;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;P75;4 Zi.;Umkreis 2 km;17,70;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Max;4 Zi.;Umkreis 2 km;20,20;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;n;5+ Zi.;Umkreis 2 km;16;;0;import;Angebotsstatistik
+angebot_tabelle;Ø m²;5+ Zi.;Umkreis 2 km;127;m²;0;import;Angebotsstatistik
+angebot_tabelle;Min;5+ Zi.;Umkreis 2 km;12,50;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Ø;5+ Zi.;Umkreis 2 km;16,20;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Median;5+ Zi.;Umkreis 2 km;16,10;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;P75;5+ Zi.;Umkreis 2 km;17,30;€/m²;2;import;Angebotsstatistik
+angebot_tabelle;Max;5+ Zi.;Umkreis 2 km;19,60;€/m²;2;import;Angebotsstatistik

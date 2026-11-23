@@ -24,3 +24,7 @@ frontend/dist/
 .claude/settings.local.json
 CLAUDE.local.md
 graphify-out/
+
+# Große Testdateien (werden von testdaten/erzeugen.py erzeugt)
+testdaten/fehlerfaelle/zu_gross.pdf
+testdaten/fehlerfaelle/bild_zu_gross.png

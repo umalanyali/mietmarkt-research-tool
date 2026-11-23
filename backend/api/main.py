@@ -26,8 +26,17 @@ from mietmarkt.agenten.modelle import Modelle, aus_konfig
 from mietmarkt.comps import im_umkreis
 from mietmarkt.db import datenbankpfad, engine
 from mietmarkt.demo import demo_oeffnen
-from mietmarkt.dokumente import DokumentUnlesbar, art_erkennen, bildgroesse, indexieren, ordner, seiten_lesen
+from mietmarkt.dokumente import (
+    DokumentUnlesbar,
+    art_erkennen,
+    bildgroesse,
+    indexieren,
+    ordner,
+    seiten_lesen,
+    suchen,
+)
 from mietmarkt.export import markdown, pptx
+from mietmarkt.expose import parsen
 from mietmarkt.geo import entfernung_km
 from mietmarkt.geo.dienste import (
     ATTRIBUTION,
@@ -299,6 +308,7 @@ class DokumentAus(BaseModel):
     seiten: int
     abschnitte: int
     ki_freigabe: bool
+    expose: dict | None = None  # Exposé-Felder aus dem Parser (nur PDF): {"felder": {feld: Wert | None}, "ausstattung"}
 
 
 @app.post("/api/projekte/{projekt_id}/dokumente", status_code=201)
@@ -340,8 +350,21 @@ async def dokument_hochladen(projekt_id: int, s: Sitzung, datei: UploadFile,
     s.add(d)
     s.commit()
     s.refresh(d)
+    # Exposé-Felder sofort und ohne KI (regelbasierter Parser); Leeres ergänzt erst ein Lauf mit KI-Freigabe
     return DokumentAus(id=d.id, dateiname=name, art=art, seiten=d.seiten, abschnitte=indexieren(s, d, seiten),
-                       ki_freigabe=ki_freigabe)
+                       ki_freigabe=ki_freigabe, expose=parsen(seiten, name, quelle.id) if art == "pdf" else None)
+
+
+@app.get("/api/projekte/{projekt_id}/dokumente/suche")
+def dokumente_suche(projekt_id: int, s: Sitzung, q: Annotated[str, Query(min_length=2, max_length=200)]) -> list[dict]:
+    """Volltextsuche in allen Unterlagen des Projekts (dieselbe Suche wie das Agenten-Werkzeug dokumente_suchen).
+
+    Eingabe: Projekt-ID, Suchtext. Ausgabe: bis zu 10 Treffer {datei, seite, ausschnitt}. Lokal, daher auch
+    Unterlagen ohne KI-Freigabe. 404 ohne Projekt, 422 bei weniger als 2 Zeichen.
+    """
+    _projekt(s, projekt_id)
+    ids = set(s.exec(select(Dokument.id).where(Dokument.projekt_id == projekt_id)).all())
+    return suchen(s, projekt_id, q, ids, n=10)
 
 
 @app.post("/api/projekte/{projekt_id}/laeufe", status_code=201)

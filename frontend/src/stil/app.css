@@ -235,6 +235,29 @@
 .d-unterlagen label { display: grid; gap: var(--s1); }
 .app .d-unterlagen-ki { display: flex; align-items: center; gap: var(--s2); font-weight: 600; }
 .d-unterlagen-ki input { accent-color: var(--akzent); }
+.d-ablage { display: grid; gap: var(--s2); justify-items: center; width: 100%; padding: var(--s4); border: 1.5px dashed var(--linie-stark); border-radius: 8px; text-align: center; }
+.d-ablage-aktiv { border-color: var(--akzent); background: var(--akzent-hell); }
+.d-ablage label:focus-within { outline: 2px solid var(--akzent); outline-offset: 2px; }
+.d-unterlagen-liste { list-style: none; padding: 0; margin: 0; width: 100%; display: grid; gap: var(--s1); }
+.d-unterlagen-liste li { display: grid; grid-template-columns: 1fr auto; gap: 0 var(--s2); padding: var(--s1) 0; border-bottom: 1px solid var(--linie); }
+.d-unterlagen-status { grid-column: 1 / -1; color: var(--text-leise); }
+.s-abgelehnt .d-unterlagen-status { color: var(--fehler); font-weight: 600; }
+.s-fertig .d-unterlagen-status { color: var(--akzent); }
+.d-unterlagen-liste label { display: flex; align-items: center; gap: var(--s1); }
+.d-unterlagen-name { overflow-wrap: anywhere; font-weight: 600; }
+.d-auswertung { grid-column: 1 / -1; margin-top: var(--s1); }
+.d-auswertung summary { cursor: pointer; font-weight: 600; color: var(--akzent); }
+.d-auswertung dl { display: grid; gap: var(--s1); margin: var(--s2) 0 0; }
+.d-auswertung dl > div { display: grid; grid-template-columns: 7.5em 1fr; gap: var(--s2); align-items: baseline; }
+.d-auswertung dt { color: var(--text-leise); }
+.d-auswertung dd { margin: 0; }
+.d-merkmal { display: block; }
+.d-unterlagen-suche { display: grid; gap: var(--s1); width: 100%; margin-top: var(--s3); padding-top: var(--s3); border-top: 1px solid var(--linie); }
+.d-unterlagen-suche label { font-weight: 600; }
+.d-unterlagen-suchzeile { display: flex; gap: var(--s2); }
+.d-unterlagen-suchzeile input { flex: 1; min-width: 0; padding: var(--s2); border: 1px solid var(--linie-stark); border-radius: 8px; font: inherit; }
+.d-treffer { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s2); }
+.d-treffer li { display: grid; gap: 2px; padding-bottom: var(--s2); border-bottom: 1px solid var(--linie); }
 
 /* Merkliste */
 .d-merkliste { background: var(--flaeche); border: 2px solid var(--schwarz); border-radius: var(--radius); overflow: hidden; }
@@ -271,3 +294,16 @@
   .d-leiste-suche { width: 100%; }
   .d-leiste-stand { margin-left: 0; }
 }
+
+/* Ergebniskarte nach einem Lauf */
+.d-ergebnis { margin: var(--s4) var(--s7) 0; display: grid; gap: var(--s4); scroll-margin-top: var(--s4); }
+.d-ergebnis-kopf { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: var(--s3); }
+.d-ergebnis-knoepfe { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.d-ergebnis-knoepfe a { text-decoration: none; color: inherit; display: inline-flex; align-items: center; }
+.d-ergebnis-raster { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--s5); }
+.d-ergebnis h4 { margin-bottom: var(--s2); }
+.d-befunde { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s2); font-size: var(--t-13); }
+.d-befunde .b-kritisch strong, .d-befunde .b-warnung strong { color: var(--fehler); }
+.d-bericht { border-top: 1px solid var(--linie); padding-top: var(--s4); display: grid; gap: var(--s4); max-width: 80ch; }
+.d-bericht p { white-space: pre-line; line-height: 1.55; }
+.d-fussnoten { list-style: none; padding: 0; font-size: var(--t-12); color: var(--text-leise); display: grid; gap: 2px; }

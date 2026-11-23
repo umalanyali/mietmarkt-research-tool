@@ -1,0 +1,7 @@
+Objekt;Anbieter;Lage im Haus;Zimmer;Baujahr;Wohnfläche (m²);Kaltmiete (€);EBK;Online seit;Anfragen;Breitengrad;Längengrad
+Ahornweg 1;Privat;Regel;2;2025;55,0;980,00;ja;01.11.2026;4;51.27;9.43
+Ahornweg 3;Privat;Penthouse;3;2025;90,0;1.900,00;ja;01.11.2026;2;;
+Ahornweg 5;Privat;Regel;2;2025;;abc;ja;01.11.2026;;;
+Ahornweg 7;Privat;DG;0;1750;70,0;1.200,00;vielleicht;31.02.2026;-3;;
+;Privat;Regel;2;2025;60,0;1.000,00;nein;2026-11-01;1;;
+Ahornweg 9;Privat;EG;2;2026;61,5;1.050,00;nein;05.11.2026;;91.0;9.43
