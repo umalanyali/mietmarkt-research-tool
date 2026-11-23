@@ -68,6 +68,7 @@ def test_bild_und_text_werden_angenommen(umgebung):
 @pytest.mark.parametrize(("name", "daten", "status"), [
     ("tarnung.pdf", b"MZ\x90\x00\x03\x00\x00\x00" * 10, 415),  # Programmdatei mit PDF-Namen
     ("gross.txt", b"a" * (main.MAX_UPLOAD_BYTES + 1), 413),
+    ("riesig.txt", b"a" * main.MAX_BODY_BYTES, 413),  # schon an Content-Length abgewiesen, vor dem Lesen
     ("kaputt.pdf", b"%PDF-1.4\nnichts als Unsinn", 422),
     ("kaputt.png", b"\x89PNG\r\n\x1a\nkein Bild", 422),
 ])

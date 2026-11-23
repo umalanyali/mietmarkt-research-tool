@@ -1,7 +1,7 @@
 // Startseite: Adresssuche, Filter, Datenstand je Quelle und zuletzt analysierte Projekte.
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { datum, useApi, type Projekt, type ProjektDetail } from "../api";
+import { Link, useNavigate } from "react-router-dom";
+import { datum, demoOeffnen, useApi, type Projekt, type ProjektDetail } from "../api";
 import { FehlerZustand, LadeZeilen } from "../komponenten/Bausteine";
 import { SucheSymbol } from "../komponenten/Symbole";
 import { Kopf, Pills, Vorschlagsliste } from "../komponenten/Gestell";
@@ -19,13 +19,15 @@ export function Startseite() {
   const [alter, setAlter] = useState<"Neubau" | "Bestand">("Neubau");
   const [umkreis, setUmkreis] = useState<"Umkreis 1 km" | "Umkreis 2 km" | "Umkreis 5 km">("Umkreis 2 km");
   const [art, setArt] = useState<"Miete" | "Kauf">("Miete");
+  const navigate = useNavigate();
+  const [demoFehler, setDemoFehler] = useState(false);
 
   return (
     <div className="app">
       <Kopf />
       <main className="d-start">
         <h1 className="d-start-titel">Mietmarkt Research</h1>
-        <p className="d-start-unter">Eine Adresse – alle importierten Marktdaten aus RIWIS, VALUE, ImmoScout24 und amtlichen Quellen</p>
+        <p className="d-start-unter">Eine Adresse – alle importierten Marktdaten, Comps und amtlichen Quellen an einem Ort</p>
 
         <form
           className="d-suche"
@@ -55,6 +57,14 @@ export function Startseite() {
           <Pills name="Umkreis" optionen={["Umkreis 1 km", "Umkreis 2 km", "Umkreis 5 km"] as const} wert={umkreis} onWahl={setUmkreis} />
           <Pills name="Vermarktung" optionen={["Miete", "Kauf"] as const} wert={art} onWahl={setArt} />
         </div>
+
+        <p className="d-start-demo">
+          <button type="button" className="e-knopf" onClick={() => demoOeffnen().then((id) => navigate(`/analyse/${id}`), () => setDemoFehler(true))}>
+            Demo-Standort öffnen
+          </button>{" "}
+          <span className="d-leise">fiktive Musterstadt mit allen Beispieldaten</span>
+        </p>
+        {demoFehler && <FehlerZustand titel="Demo konnte nicht geladen werden" text="Läuft der Server auf Port 8000?" />}
 
         {anlage.status === "nicht-erreichbar" && (
           <FehlerZustand titel="Geokodierung nicht erreichbar" text="Nominatim antwortet gerade nicht; das Projekt wurde nicht angelegt." aktion="Erneut versuchen" onAktion={() => suche.vorschlaege[0] && suche.waehlen(suche.vorschlaege[0])} />

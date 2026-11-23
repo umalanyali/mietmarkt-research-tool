@@ -7,13 +7,14 @@ import httpx
 import pytest
 import respx
 from ki_fakes import befunde, bericht, entscheidung, ki, modelle
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.types import Command
 from sqlmodel import Session
 
 from mietmarkt.agenten.bericht import anzeigen
+from mietmarkt.agenten.ereignisse import ereignisse
 from mietmarkt.agenten.graph import (
     MAX_RUNDEN,
     Entscheidung,
@@ -602,3 +603,9 @@ def test_portaldaten_freigabe_gibt_keine_unterlagen_frei(db):
     k = Konfig(_env_file=None, anthropic_api_key="test", ki_portaldaten_senden=True)
     w = next(t for t in werkzeuge(db, k)["standort"] if t.name == "dokumente_suchen")
     assert json.loads(w.invoke({"projekt_id": 1, "frage": "Balkon"}))["treffer"] == []
+
+
+def test_validierung_ohne_ergebnis_gibt_keine_ereignisse():
+    """Schickt die Validierung den Mietansatz-Agenten zurück (fehlende DG-Herleitung), hat ihr Update keine
+    „ergebnisse“; die Übersetzung in Ereignisse darf daran nicht scheitern (Fund aus dem echten Demo-Lauf)."""
+    assert ereignisse("updates", {"validierung": {"nachrichten": [HumanMessage("Leitplanke: Es fehlt dg")]}}) == []

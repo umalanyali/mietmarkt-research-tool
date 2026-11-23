@@ -4,7 +4,7 @@
 !.env.example
 /daten/
 
-# Mockups enthalten fremde Marken, bleiben lokal
+# Lokale Entwürfe, nie committen
 docs/mockups/
 
 # Python

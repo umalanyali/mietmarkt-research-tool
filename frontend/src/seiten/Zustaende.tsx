@@ -18,9 +18,9 @@ export function Zustaende() {
           {[
             ["Karte lädt", <Karte key="l" zentrum={ORT} ringeKm={[2]} comps={[]} weitere={LEER} aktiveEbenen={new Set()} ausgewaehlt={null} onAuswahl={() => {}} zustand="laden" hoehe={200} />],
             ["Karte nicht erreichbar", <Karte key="f" zentrum={ORT} ringeKm={[2]} comps={[]} weitere={LEER} aktiveEbenen={new Set()} ausgewaehlt={null} onAuswahl={() => {}} zustand="fehler" hoehe={200} />],
-            ["Noch keine Exposés", <LeerZustand key="e" titel="Noch keine Vergleichsangebote" text="IS24-Exposés als PDF ablegen. Der Exposé-Agent liest sie und legt die Comps zur Freigabe vor." aktion="Exposés importieren" />],
+            ["Noch keine Exposés", <LeerZustand key="e" titel="Noch keine Vergleichsangebote" text="Portal-Exposés als PDF ablegen. Der Exposé-Agent liest sie und legt die Comps zur Freigabe vor." aktion="Exposés importieren" />],
             ["Kennzahlen werden berechnet", <LadeZeilen key="z" zeilen={5} />],
-            ["Teildaten", <LeerZustand key="t" titel="RIWIS fehlt für PLZ 12345" text="VALUE und Comps sind vollständig. Die linke Spalte bleibt leer, bis ein Screenshot importiert ist." aktion="Screenshot ablegen" />],
+            ["Teildaten", <LeerZustand key="t" titel="Marktbericht fehlt für PLZ 12345" text="Angebotsstatistik und Comps sind vollständig. Die linke Spalte bleibt leer, bis ein Screenshot importiert ist." aktion="Screenshot ablegen" />],
             ["Agent gestoppt", <FehlerZustand key="a" titel="Screenshot-Agent: Anfragelimit erreicht" text="Die Anthropic-API meldet zu viele Anfragen. Der Lauf ist gesichert und setzt an dieser Stelle fort." aktion="In 30 s fortsetzen" />],
           ].map(([titel, inhalt]) => (
             <figure key={titel as string} className="d-karte">

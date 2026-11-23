@@ -118,7 +118,7 @@ def werkzeuge(e: Engine, k: Konfig) -> dict[str, list[BaseTool]]:
     @tool
     def kennzahlen(projekt_id: ProjektId) -> str:
         """Kennzahlen der Comps im Umkreis (Anzahl, Median, Quartile, Ø flächengewichtet, Regelgeschoss/EG und DG,
-        Anfragen je Monat) sowie die importierten Marktkennzahlen des Projekts (RIWIS, VALUE …) mit Quelle."""
+        Anfragen je Monat) sowie die importierten Marktkennzahlen des Projekts (Marktbericht, Angebotsstatistik …) mit Quelle."""
         with Session(e) as s:
             p = s.get(Projekt, projekt_id)
             comps, comps_ohne = freigegeben(p, im_umkreis(s, p))
@@ -174,12 +174,12 @@ def werkzeuge(e: Engine, k: Konfig) -> dict[str, list[BaseTool]]:
     @tool
     def ansatz_pruefen(projekt_id: ProjektId, ansatz_eur_qm: float | None) -> str:
         """Vergleicht den freigegebenen Mietansatz mit dem Median der Comps, dem Ø Regelgeschoss/EG und den
-        VALUE-Kennzahlen in €/m²; auffällig ab mehr als 15 % Abweichung."""
+        Kennzahlen der Angebotsstatistik in €/m²; auffällig ab mehr als 15 % Abweichung."""
         with Session(e) as s:
             p = s.get(Projekt, projekt_id)
             comps, comps_ohne = freigegeben(p, im_umkreis(s, p))
             markt, markt_ohne = freigegeben(p, list(s.exec(select(Marktkennzahl).where(
-                Marktkennzahl.projekt_id == p.id, Marktkennzahl.gruppe == "value", Marktkennzahl.einheit == "€/m²"))))
+                Marktkennzahl.projekt_id == p.id, Marktkennzahl.gruppe == "angebot", Marktkennzahl.einheit == "€/m²"))))
         # Nur zusammenfassende Kennzahlen: Zeitreihen, Min/Max und Quantile liegen erwartbar weit vom Ansatz entfernt
         k = comps_kennzahlen(comps, p.stichtag)
         vergleich = {"Median Comps": k["median"], "Ø flächengewichtet Regelgeschoss/EG": k["regel_eg"]} | {

@@ -1,4 +1,4 @@
-// Analyse-Dashboard in drei Spalten (Aufbau nach Mockup): RIWIS links, Lage und Comps in der Mitte, VALUE, Mietansatz,
+// Analyse-Dashboard in drei Spalten (Aufbau nach Mockup): Marktbericht links, Lage und Comps in der Mitte, Angebotsstatistik, Mietansatz,
 // weitere Quellen und Merkliste rechts. Ohne Logo und Firmenname; Akzent Oliv (CLAUDE.md Regel 5).
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -12,14 +12,14 @@ import { Karte, EBENEN, type Ebene } from "../komponenten/Karte";
 import { Agentenleiste } from "../komponenten/Agentenleiste";
 import { UmfeldKarte } from "../komponenten/UmfeldKarte";
 import { Kopf, Pills, Vorschlagsliste } from "../komponenten/Gestell";
-import { CompsTabelle, EStern, FehlerZustand, FreigabeKarte, Herleitung, LadeZeilen, LeerZustand, ValueTabelle } from "../komponenten/Bausteine";
+import { CompsTabelle, EStern, FehlerZustand, FreigabeKarte, Herleitung, LadeZeilen, LeerZustand, AngebotTabelle } from "../komponenten/Bausteine";
 import { HerkunftMarke } from "../komponenten/Herkunft";
 import { Unterlagen } from "../komponenten/Unterlagen";
 import { useLauf } from "../lauf";
 import { useAdressSuche, useMerkliste, useProjektAnlage, passtZimmer, ZIMMER, type ZimmerFilter } from "../hooks";
 
 // Quellenkürzel in der Merkliste
-const KUERZEL: Record<string, string> = { RIWIS: "R", VALUE: "V", IS24: "IS" };
+const KUERZEL: Record<string, string> = { Marktbericht: "M", Angebotsstatistik: "A", Portal: "P" };
 
 // Farben und Strichmuster der Zeitreihen in Reihenfolge der Reihen (zweite Kodierung neben der Farbe)
 const REIHEN_STIL = [
@@ -74,7 +74,7 @@ export function Analyse() {
 }
 
 /**
- * Dashboard in drei Spalten: RIWIS links, Lage und Comps in der Mitte, VALUE, Mietansatz, Quellen und Merkliste rechts.
+ * Dashboard in drei Spalten: Marktbericht links, Lage und Comps in der Mitte, Angebotsstatistik, Mietansatz, Quellen und Merkliste rechts.
  * Eingabe: geladene API-Daten. Ausgabe: Seite.
  */
 function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail; comps: Comp[]; kennzahlen: Kennzahlen }) {
@@ -99,7 +99,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
   const k = kennzahlen.kennzahlen;
   const quelle = (id: number | null) => kennzahlen.quellen.find((q) => q.id === id);
   const dateiQuellen = projekt.quellen.filter((q) => q.art === "datei");
-  const valueQuelle = projekt.quellen.find((q) => q.name === "VALUE");
+  const angebotQuelle = projekt.quellen.find((q) => q.name === "Angebotsstatistik");
   // Soziodemografie: Wert im Ortsteil, darunter der Vergleichswert der Stadt
   const sozio = gruppe(k, "soziodemografie").filter((x) => x.gebiet !== "Stadt");
   const stadt = (bez: string) => gruppe(k, "soziodemografie").find((x) => x.gebiet === "Stadt" && x.bezeichnung === bez);
@@ -132,11 +132,11 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
     an: m.istGemerkt(id),
     klick: () => m.umschalten({ id, titel, quelle, art, folie }),
   });
-  const kennzahlenStern = merk("m2", "Einwohner, Haushalte, Kaufkraft", "RIWIS", "Kennzahlen", "Standort");
-  const zeitreiheStern = merk("m1", "Angebotsmieten Neubau, Zeitreihe", "RIWIS", "Diagramm", "Mietmarkt");
-  const preisStern = merk("preisklassen", "Preisklassen Neubau", "RIWIS", "Diagramm", "Mietmarkt");
-  const screenStern = merk("m5", "Wohnlagenkarte", "RIWIS", "Bild", "Standort");
-  const valueStern = merk("m3", "Angebotsmiete Neubau 17,40 €/m²", "VALUE", "Kennzahl", "Marktdaten");
+  const kennzahlenStern = merk("m2", "Einwohner, Haushalte, Kaufkraft", "Marktbericht", "Kennzahlen", "Standort");
+  const zeitreiheStern = merk("m1", "Angebotsmieten Neubau, Zeitreihe", "Marktbericht", "Diagramm", "Mietmarkt");
+  const preisStern = merk("preisklassen", "Preisklassen Neubau", "Marktbericht", "Diagramm", "Mietmarkt");
+  const screenStern = merk("m5", "Wohnlagenkarte", "Marktbericht", "Bild", "Standort");
+  const angebotStern = merk("m3", "Angebotsmiete Neubau 17,40 €/m²", "Angebotsstatistik", "Kennzahl", "Marktdaten");
   const quellenStern = merk("quellen", "Weitere Quellen", "Amtlich", "Liste", "Standort");
 
   const kartenblock = (
@@ -221,7 +221,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
           <section className="d-karte d-banner" aria-labelledby="d-keine-daten">
             <h2 id="d-keine-daten">Für diesen Standort sind keine Marktdaten importiert.</h2>
             <p className="d-leise">
-              Lage und Umfeld kommen live aus OpenStreetMap. Comps, RIWIS- und VALUE-Werte erscheinen, sobald Daten im Umkreis von{" "}
+              Lage und Umfeld kommen live aus OpenStreetMap. Comps, Marktbericht- und Angebotswerte erscheinen, sobald Daten im Umkreis von{" "}
               {de(projekt.umkreis_km, 0)} km importiert sind.
             </p>
             <p className="d-banner-aktionen">
@@ -245,10 +245,10 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
         </main>
       ) : (
         <main className="d-spalten">
-          {/* =========================================== links: RIWIS */}
-          <section className="d-spalte" aria-labelledby="d-riwis">
-            <h2 id="d-riwis" className="d-balken">
-              <span>RIWIS</span>
+          {/* =========================================== links: Marktbericht */}
+          <section className="d-spalte" aria-labelledby="d-markt">
+            <h2 id="d-markt" className="d-balken">
+              <span>Marktbericht</span>
               <span className="d-balken-info">
                 Soziodemografie · PLZ {projekt.plz}
               </span>
@@ -258,7 +258,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
               <div className="d-karte-stern">
                 <EStern an={kennzahlenStern.an} name="Kennzahlen Soziodemografie" onKlick={kennzahlenStern.klick} />
               </div>
-              {sozio.length === 0 && <LeerZustand titel="Keine Soziodemografie" text="RIWIS-Screenshot importieren, um Einwohner, Haushalte und Kaufkraft zu sehen." />}
+              {sozio.length === 0 && <LeerZustand titel="Keine Soziodemografie" text="Marktbericht-Screenshot importieren, um Einwohner, Haushalte und Kaufkraft zu sehen." />}
               <dl className="d-kpis">
                 {sozio.map((x) => (
                   <div key={x.id}>
@@ -284,7 +284,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
                 <EStern an={zeitreiheStern.an} name="Angebotsmieten-Zeitreihe" onKlick={zeitreiheStern.klick} />
               </div>
               {zeitreihe.length === 0 ? (
-                <LeerZustand titel="Keine Zeitreihe" text="Angebotsmieten erscheinen nach dem RIWIS-Import." />
+                <LeerZustand titel="Keine Zeitreihe" text="Angebotsmieten erscheinen nach dem Import des Marktberichts." />
               ) : (
                 <Zeitreihe
                   daten={zeitreihe}
@@ -295,7 +295,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
                 />
               )}
               <button type="button" className="d-link d-mehr">
-                Alle RIWIS-Daten öffnen →
+                Alle Marktbericht-Daten öffnen →
               </button>
             </div>
 
@@ -307,7 +307,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
                 <EStern an={preisStern.an} name="Preisklassen" onKlick={preisStern.klick} />
               </div>
               {preisklassen.length === 0 ? (
-                <LeerZustand titel="Keine Preisklassen" text="Die Verteilung erscheint nach dem RIWIS-Import." />
+                <LeerZustand titel="Keine Preisklassen" text="Die Verteilung erscheint nach dem Import des Marktberichts." />
               ) : (
                 <Saeulen daten={preisklassen} einheit="€/m²" hoehe={110} />
               )}
@@ -320,7 +320,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
 
             <div className="d-karte">
               <div className="d-karte-kopf">
-                <h3>Screenshot RIWIS-Marktmonitor</h3>
+                <h3>Screenshot Marktbericht</h3>
                 <EStern an={screenStern.an} name="Screenshot Wohnlagenkarte" onKlick={screenStern.klick} />
               </div>
               <button type="button" className="d-ablage">
@@ -337,7 +337,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
           {/* =========================================== Mitte: Lage & Comps */}
           <section className="d-spalte" aria-labelledby="d-lage">
             <h2 id="d-lage" className="d-balken">
-              <span>Lage &amp; ImmoScout24-Comps</span>
+              <span>Lage &amp; Comps</span>
               <span className="d-balken-info">
                 {comps.length} Exposés · {weitere.projekte.length} Projekte · Stichtag {datum(projekt.stichtag)}
               </span>
@@ -358,7 +358,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
                 <Pills name="Zimmer" optionen={ZIMMER.map((z) => (z === "Alle" ? z : `${z} Zi.`)) as unknown as readonly string[]} wert={zimmer === "Alle" ? "Alle" : `${zimmer} Zi.`} onWahl={(w) => setZimmer((w === "Alle" ? "Alle" : w.replace(" Zi.", "")) as ZimmerFilter)} />
               </div>
               {comps.length === 0 ? (
-                <LeerZustand titel="Noch keine Vergleichsangebote" text="IS24-Exposés oder eine Comps-Datei (CSV/XLSX) importieren." aktion="Comps importieren" />
+                <LeerZustand titel="Noch keine Vergleichsangebote" text="Portal-Exposés oder eine Comps-Datei (CSV/XLSX) importieren." aktion="Comps importieren" />
               ) : sichtbar.length === 0 ? (
                 <LeerZustand titel="Keine Comps mit dieser Zimmerzahl" text="Filter auf „Alle“ stellen oder weitere Exposés importieren." aktion="Exposés importieren" />
               ) : (
@@ -378,22 +378,22 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
             </div>
           </section>
 
-          {/* =========================================== rechts: VALUE, Quellen, Merkliste */}
-          <section className="d-spalte" aria-labelledby="d-value">
-            <h2 id="d-value" className="d-balken">
-              <span>VALUE Marktdaten</span>
+          {/* =========================================== rechts: Angebotsstatistik, Quellen, Merkliste */}
+          <section className="d-spalte" aria-labelledby="d-angebot">
+            <h2 id="d-angebot" className="d-balken">
+              <span>Angebotsstatistik</span>
               <span className="d-balken-info">
-                {valueQuelle ? valueQuelle.stand : "kein Import"} · Umkreis {de(projekt.umkreis_km, 0)} km
+                {angebotQuelle ? angebotQuelle.stand : "kein Import"} · Umkreis {de(projekt.umkreis_km, 0)} km
               </span>
             </h2>
 
             <div className="d-karte">
               <div className="d-karte-stern">
-                <EStern an={valueStern.an} name="Angebotsmiete Neubau" onKlick={valueStern.klick} />
+                <EStern an={angebotStern.an} name="Angebotsmiete Neubau" onKlick={angebotStern.klick} />
               </div>
-              {gruppe(k, "value").length === 0 && <LeerZustand titel="Keine VALUE-Daten" text="VALUE-Export (CSV/XLSX) importieren." />}
+              {gruppe(k, "angebot").length === 0 && <LeerZustand titel="Keine Angebotsdaten" text="Angebotsstatistik-Export (CSV/XLSX) importieren." />}
               <dl className="d-kpis d-kpis-2">
-                {gruppe(k, "value").map((x) => {
+                {gruppe(k, "angebot").map((x) => {
                   // Veränderungen in % mit Vorzeichen und Akzent, damit die Richtung sofort lesbar ist
                   const veraenderung = x.einheit === "%" && (x.wert ?? 0) > 0;
                   return (
@@ -408,7 +408,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
                   );
                 })}
               </dl>
-              {gruppe(k, "value_tabelle").length > 0 && <ValueTabelle werte={gruppe(k, "value_tabelle")} />}
+              {gruppe(k, "angebot_tabelle").length > 0 && <AngebotTabelle werte={gruppe(k, "angebot_tabelle")} />}
             </div>
 
             <div className="d-karte">

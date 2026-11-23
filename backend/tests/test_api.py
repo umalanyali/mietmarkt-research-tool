@@ -33,7 +33,7 @@ def test_projekte_liste(client):
 def test_projekt_mit_quellen_und_404(client):
     """GET /api/projekte/{id} liefert das Projekt samt Datenstand je Quelle; unbekannte ID gibt 404."""
     p = client.get("/api/projekte/1").json()
-    assert p["name"] == "Lindenquartier" and {q["name"] for q in p["quellen"]} >= {"RIWIS", "VALUE"}
+    assert p["name"] == "Lindenquartier" and {q["name"] for q in p["quellen"]} >= {"Marktbericht", "Angebotsstatistik"}
     assert client.get("/api/projekte/999").status_code == 404
 
 
@@ -53,7 +53,7 @@ def test_comps_mit_berechneten_werten(client):
 def test_kennzahlen_mit_zusammenfassung(client):
     """Kennzahlen: Marktwerte aus dem Import plus berechnete Comps-Zusammenfassung und Preisklassen."""
     k = client.get("/api/projekte/1/kennzahlen").json()
-    assert {x["gruppe"] for x in k["kennzahlen"]} >= {"soziodemografie", "zeitreihe", "value", "weitere"}
+    assert {x["gruppe"] for x in k["kennzahlen"]} >= {"soziodemografie", "zeitreihe", "angebot", "weitere"}
     assert k["comps"]["regel_eg"]["wert"] == pytest.approx(16.96, abs=0.005)
     assert k["comps"]["dg"]["wert"] == pytest.approx(19.16, abs=0.005)
     assert k["comps"]["anfragen_monat"]["wert"] == pytest.approx(24.1, abs=0.05)
@@ -79,3 +79,11 @@ def test_post_nur_von_eigener_herkunft(client, origin, erwartet):
     kopf = {"Origin": origin} if origin else {}
     assert client.post("/api/projekte/999/laeufe", headers=kopf).status_code == erwartet
     assert client.get("/api/projekte", headers=kopf).status_code == 200  # Lesen bleibt erlaubt (Antwort sperrt CORS)
+
+
+def test_demo_oeffnen_liefert_projekt_id(client):
+    """POST /api/demo liefert die ID des Demo-Standorts Lindenquartier, ohne Dubletten anzulegen."""
+    a = client.post("/api/demo").json()
+    b = client.post("/api/demo").json()
+    assert a == b and client.get(f"/api/projekte/{a['projekt_id']}").json()["name"] == "Lindenquartier"
+    assert len(client.get("/api/projekte").json()) == 3

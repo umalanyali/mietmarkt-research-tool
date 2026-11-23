@@ -9,7 +9,7 @@
 - Drei Design-Richtungen A–C erprobt und verworfen; gewählt: Gestaltung nach Mockup (vormals „Richtung D“),
   Akzent Oliv, warme Neutraltöne, Hanken Grotesk, eigener MapLibre-Stil auf OpenFreeMap.
 - Aufgeräumt: Entwürfe A–C und M1-Prototyp entfernt (−4.700 Zeilen), Kommentare nach Regel 9.
-- Screenshots der gewählten Gestaltung: `docs/design/richtung-d/`.
+- Screenshots der Oberfläche: `docs/screenshots/` (seit 23.11.2026; die alten Entwurfsbilder sind entfernt).
 
 ## M2 – Fachkern und API (22.11.2026)
 - Routen: `/` Startseite, `/analyse/:id` Dashboard, `/zustaende` Zustandsübersicht (vorher `/entwurf/d/…`).
@@ -105,7 +105,7 @@
   Abhilfe später: Prüfung und `aktive_laeufe.add` vor das erste `await` ziehen.
 - **P10** Werte-Katalog: mehrere `comps_filtern`-Aufrufe mit unterschiedlichem Filter überschreiben sich je
   Listenposition (IDs ohne Aufrufindex).
-- **P11** VALUE-Vergleichswerte aus `ansatz_pruefen` haben im Katalog keine Beschreibung (kein `rechenweg_text`).
+- **P11** Vergleichswerte der Angebotsstatistik aus `ansatz_pruefen` haben im Katalog keine Beschreibung (kein `rechenweg_text`).
 - **P12** Ein Supervisor, der stur „fertig“ mit Rückfrage antwortet, fragt bis zum Rundenlimit erneut (begrenzt,
   aber bis zu 6 bezahlte Aufrufe). Der Docstring von `_leitplanken` ist angepasst.
 - **P13** `recursion_limit` (80) gilt je Aufruf bzw. Fortsetzung, nicht je Lauf; die Agent-Werkzeug-Schleife
@@ -182,3 +182,18 @@
   - **Dokumentliste:** Upload zeigt nur das Ergebnis der letzten Datei; Liste und Löschen fehlen (API und Frontend),
     ebenso das nachträgliche Ändern von `ki_freigabe`.
   - Neue Anpassungen lassen sich beim Ändern nicht hinzufügen oder entfernen, nur Beträge und Basiswert ändern.
+
+## Veröffentlichungsvorbereitung (23.11.2026)
+- README neu (Schnellstart, Architektur als Mermaid, „Warum rechnet die KI nicht?“, gemessene Kosten, Datenschutz,
+  Grenzen), `LICENSE` (MIT), `CHANGELOG.md`, Screenshots und Lauf-GIF in `docs/screenshots/` (`skripte/lauf-gif.mjs`).
+- Knopf „Demo-Standort öffnen“ auf der Startseite, `POST /api/demo` (`demo_oeffnen`: ergänzt die Demo, löscht nichts).
+- Neutral: Produktnamen fremder Datenanbieter in Code, Demo-Daten und Oberfläche ersetzt (Marktbericht,
+  Angebotsstatistik, Portal-Exposés; Kennzahl-Gruppen `angebot`, `angebot_tabelle`). Alte Entwurfsbilder entfernt.
+  Lokale DB: Demo neu laden (`python -m mietmarkt.demo seed`), sonst zeigt sie die alten Namen und Gruppen.
+- Gemessen: echter Lauf auf dem Demo-Standort 95.941 Token, 0,18 € (Sonnet 5.5 + Haiku 5.5, Overpass ausgefallen).
+- Fund aus dem echten Lauf behoben: `ereignisse()` scheiterte mit KeyError, wenn `validierung` den Mietansatz-Agenten
+  wegen fehlender DG-Herleitung zurückschickt (Lauf brach ab).
+- security-reviewer (ganzes Repo), Befunde behoben: N1 zu große Uploads schon an `Content-Length` abgewiesen (413),
+  N2 PDF-/Bildprüfung im Thread statt in der Event-Loop, N3 `aktive_laeufe` per `finally` freigegeben (kein
+  dauerhaftes 409), N4 Datenschutzliste im README vollständig.
+- Tests: Backend 226, Frontend 25.

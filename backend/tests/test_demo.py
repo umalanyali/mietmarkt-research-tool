@@ -1,11 +1,12 @@
 """Demo-Datensatz Musterstadt: Seed in eine leere Datenbank, wiederholbar, jede Zahl mit Herkunft und Quelle."""
+import datetime as dt
 import subprocess
 import sys
 
 from sqlmodel import Session, select
 
 from mietmarkt.db import engine
-from mietmarkt.demo import seed
+from mietmarkt.demo import demo_oeffnen, seed
 from mietmarkt.modelle import Comp, Marktkennzahl, Projekt, Quelle
 
 
@@ -48,3 +49,17 @@ def test_befehl_seed_auf_der_kommandozeile(tmp_path):
     lauf = subprocess.run([sys.executable, "-m", "mietmarkt.demo", "seed", "--db", str(pfad)], capture_output=True, text=True, check=False)
     assert lauf.returncode == 0, lauf.stderr
     assert pfad.exists() and "3 Projekte" in lauf.stdout
+
+
+def test_demo_oeffnen_ergaenzt_ohne_zu_loeschen(tmp_path):
+    """demo_oeffnen legt die Demo nur an, wenn sie fehlt, und lässt eigene Projekte stehen."""
+    e = engine(tmp_path / "t.db")
+    with Session(e) as s:
+        s.add(Projekt(name="Eigenes", adresse="Musterweg 1", plz="99999", ort="Hafenstadt", ortsteil="Mitte", lat=51.0,
+                      lon=9.0, stichtag=dt.date(2026, 11, 4), analysiert_am=dt.date(2026, 11, 4)))
+        s.commit()
+        erste = demo_oeffnen(s)
+        zweite = demo_oeffnen(s)
+        namen = [p.name for p in s.exec(select(Projekt)).all()]
+        assert erste == zweite and s.get(Projekt, erste).name == "Lindenquartier"
+    assert namen == ["Eigenes", "Lindenquartier", "Hafenblock", "Am Stadtpark"]

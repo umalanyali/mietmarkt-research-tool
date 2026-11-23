@@ -1,4 +1,5 @@
 """FastAPI-Anwendung. Die Endpunkte lesen aus der Datenbank und reichen Berechnungen an das Fachpaket `mietmarkt` weiter."""
+import asyncio
 import datetime as dt
 import json
 import logging
@@ -24,6 +25,7 @@ from mietmarkt.agenten.graph import Antwort, Freigabe, baue_graph, lauf_konfig, 
 from mietmarkt.agenten.modelle import Modelle, aus_konfig
 from mietmarkt.comps import im_umkreis
 from mietmarkt.db import datenbankpfad, engine
+from mietmarkt.demo import demo_oeffnen
 from mietmarkt.dokumente import DokumentUnlesbar, art_erkennen, bildgroesse, indexieren, ordner, seiten_lesen
 from mietmarkt.export import markdown, pptx
 from mietmarkt.geo import entfernung_km
@@ -52,6 +54,10 @@ app = FastAPI(title="Mietmarkt Research", version=__version__)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])
 
 
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+MAX_BODY_BYTES = MAX_UPLOAD_BYTES + 64 * 1024  # Spielraum für Multipart-Rahmen und Formularfelder
+
+
 class EigeneHerkunft:
     """CSRF-Schutz: schreibende Anfragen nur ohne Origin (curl, Tests) oder von localhost/127.0.0.1 (eigene Oberfläche).
 
@@ -64,12 +70,19 @@ class EigeneHerkunft:
         self.app = app
 
     async def __call__(self, scope, receive, send) -> None:
-        """Weist POST/PUT/DELETE mit fremdem Origin mit 403 ab. Eingabe: ASGI-Scope, receive, send. Ausgabe: keine."""
+        """Weist POST/PUT/DELETE mit fremdem Origin (403) oder zu großem Body (413) ab. Eingabe: ASGI-Scope, receive, send. Ausgabe: keine."""
         if scope["type"] == "http" and scope["method"] not in ("GET", "HEAD", "OPTIONS"):
             origin = dict(scope["headers"]).get(b"origin")
             # „null“ (Sandbox, Datei) hat keinen Hostnamen und wird ebenfalls abgewiesen
             if origin is not None and urlsplit(origin.decode("latin-1")).hostname not in ("localhost", "127.0.0.1"):
                 await JSONResponse(status_code=403, content={"detail": "Anfrage von fremder Website abgewiesen"})(
+                    scope, receive, send)
+                return
+            # Zu große Uploads abweisen, bevor Starlette den Body in eine Temp-Datei schreibt.
+            # shortcut: Anfragen ohne Content-Length (chunked) prüft erst der Endpunkt; Browser senden ihn immer.
+            laenge = dict(scope["headers"]).get(b"content-length", b"0")
+            if not laenge.isdigit() or int(laenge) > MAX_BODY_BYTES:
+                await JSONResponse(status_code=413, content={"detail": "Datei zu groß (höchstens 10 MB, Bilder 5 MB)"})(
                     scope, receive, send)
                 return
         await self.app(scope, receive, send)
@@ -176,6 +189,12 @@ def projekte(s: Sitzung) -> list[Projekt]:
     return list(s.exec(select(Projekt).order_by(Projekt.analysiert_am.desc(), Projekt.id.desc())).all())
 
 
+@app.post("/api/demo")
+def demo(s: Sitzung) -> dict[str, int]:
+    """Demo-Standort Musterstadt öffnen; legt die Demo-Daten nur an, wenn sie fehlen. Ausgabe: {projekt_id}."""
+    return {"projekt_id": demo_oeffnen(s)}
+
+
 @app.get("/api/adressen/vorschlaege")
 async def adressvorschlaege(s: Sitzung, q: Annotated[str, Query(min_length=3, max_length=200)]) -> Vorschlaege:
     """Adressvorschläge in Deutschland über Photon. Eingabe: Suchtext ab 3 Zeichen. Ausgabe: Vorschläge oder 503."""
@@ -268,7 +287,6 @@ def kennzahlen(projekt_id: int, s: Sitzung) -> KennzahlenAus:
     )
 
 
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_BILD_BYTES = 5 * 1024 * 1024  # Grenze der Anthropic-API je Bild
 
 
@@ -304,10 +322,11 @@ async def dokument_hochladen(projekt_id: int, s: Sitzung, datei: UploadFile,
     ziel = ordner(s.get_bind()) / pfad
     try:
         if art in ("png", "jpg"):
-            bildgroesse(daten)
+            await asyncio.to_thread(bildgroesse, daten)
         ziel.parent.mkdir(parents=True, exist_ok=True)
         ziel.write_bytes(daten)
-        seiten = seiten_lesen(ziel, art)
+        # im Thread: PDF-Parsen ist synchron und würde sonst alle laufenden Ereignisströme anhalten
+        seiten = await asyncio.to_thread(seiten_lesen, ziel, art)
     except DokumentUnlesbar as f:
         ziel.unlink(missing_ok=True)
         raise HTTPException(status_code=422, detail=str(f)) from f
@@ -394,44 +413,47 @@ def _ausfuehren(lauf: Lauf, e, k: Konfig, m: Modelle, pfad: Path, fortsetzung: C
 
     async def _ablauf() -> AsyncIterator[str]:
         """Führt den Graphen aus bzw. fort. Ausgabe: Text je Ereignis."""
-        async with AsyncSqliteSaver.from_conn_string(str(pfad)) as cp:
-            graph, konf = baue_graph(m, e, k, cp), lauf_konfig(lauf_id)
-            stand = await graph.aget_state(konf)
-            # stand.values leer: noch nie gelaufen; stand.next nicht leer: unterbrochen oder angehalten
-            if fortsetzung or not stand.values or stand.next:
-                eingabe = fortsetzung or (None if stand.values else startzustand(projekt_id))
-                try:
-                    async for modus, daten in graph.astream(eingabe, konf, stream_mode=["updates", "messages"]):
-                        for ereignis in ereignisse(modus, daten):
-                            yield _sse(ereignis)
-                except Exception as f:  # jeder Fehler wird gemeldet; der Lauf lässt sich später fortsetzen
-                    # Details (evtl. Pfade, Antwortkörper) nur ins lokale Log; der Browser bekommt eine feste Meldung
-                    logger.exception("Lauf %s unterbrochen", lauf_id)
-                    yield _sse({"typ": "fehler", "meldung": f"Lauf unterbrochen ({type(f).__name__}). Erneuter Abruf "
-                                                            "setzt ihn am letzten Schritt fort; Details im Server-Log."})
+        try:
+            async with AsyncSqliteSaver.from_conn_string(str(pfad)) as cp:
+                graph, konf = baue_graph(m, e, k, cp), lauf_konfig(lauf_id)
+                stand = await graph.aget_state(konf)
+                # stand.values leer: noch nie gelaufen; stand.next nicht leer: unterbrochen oder angehalten
+                if fortsetzung or not stand.values or stand.next:
+                    eingabe = fortsetzung or (None if stand.values else startzustand(projekt_id))
+                    try:
+                        async for modus, daten in graph.astream(eingabe, konf, stream_mode=["updates", "messages"]):
+                            for ereignis in ereignisse(modus, daten):
+                                yield _sse(ereignis)
+                    except Exception as f:  # jeder Fehler wird gemeldet; der Lauf lässt sich später fortsetzen
+                        # Details (evtl. Pfade, Antwortkörper) nur ins lokale Log; der Browser bekommt eine feste Meldung
+                        logger.exception("Lauf %s unterbrochen", lauf_id)
+                        yield _sse({"typ": "fehler", "meldung": f"Lauf unterbrochen ({type(f).__name__}). Erneuter Abruf "
+                                                                "setzt ihn am letzten Schritt fort; Details im Server-Log."})
+                        return
+                stand = await graph.aget_state(konf)
+                if stand.next:  # wartet auf Freigabe oder Antwort; das Ereignis ist schon gesendet, der Checkpoint bleibt
                     return
-            stand = await graph.aget_state(konf)
-            if stand.next:  # wartet auf Freigabe oder Antwort; das Ereignis ist schon gesendet, der Checkpoint bleibt
-                return
-            ende = stand.values
-            schluss = {"typ": "fertig", "status": "abgebrochen" if ende.get("abbruch") else "fertig",
-                       "abbruch": ende.get("abbruch"),
-                       "rueckfragen": [{"frage": f, "antwort": a} for f, a in
-                                       zip(ende["rueckfragen"], ende.get("antworten", []), strict=False)],
-                       "kosten_eur": sum(x["eur"]["wert"] for x in ende["kosten"]),
-                       "ergebnisse": {a: {"text": r["text"], "markierungen": r["markierungen"]}
-                                      for a, r in ende["ergebnisse"].items()},
-                       "freigabe": ende.get("freigabe"), "bericht": ende.get("bericht")}
-            # Erst speichern, dann senden (bricht die Verbindung beim Senden ab, ist der Endstand trotzdem da).
-            # Danach wird der Checkpoint nicht mehr gebraucht; so wächst checkpoints.db nicht mit jedem Lauf.
-            with Session(e) as s2:
-                beendet = s2.get(Lauf, lauf_id)
-                beendet.ergebnis = json.dumps(schluss, ensure_ascii=False, default=str)
-                s2.commit()
-            await cp.adelete_thread(lauf_id)
-            yield _sse(schluss)
+                ende = stand.values
+                schluss = {"typ": "fertig", "status": "abgebrochen" if ende.get("abbruch") else "fertig",
+                           "abbruch": ende.get("abbruch"),
+                           "rueckfragen": [{"frage": f, "antwort": a} for f, a in
+                                           zip(ende["rueckfragen"], ende.get("antworten", []), strict=False)],
+                           "kosten_eur": sum(x["eur"]["wert"] for x in ende["kosten"]),
+                           "ergebnisse": {a: {"text": r["text"], "markierungen": r["markierungen"]}
+                                          for a, r in ende["ergebnisse"].items()},
+                           "freigabe": ende.get("freigabe"), "bericht": ende.get("bericht")}
+                # Erst speichern, dann senden (bricht die Verbindung beim Senden ab, ist der Endstand trotzdem da).
+                # Danach wird der Checkpoint nicht mehr gebraucht; so wächst checkpoints.db nicht mit jedem Lauf.
+                with Session(e) as s2:
+                    beendet = s2.get(Lauf, lauf_id)
+                    beendet.ergebnis = json.dumps(schluss, ensure_ascii=False, default=str)
+                    s2.commit()
+                await cp.adelete_thread(lauf_id)
+                yield _sse(schluss)
+        finally:  # auch bei Fehlern außerhalb von astream (z. B. „database is locked“) nicht auf 409 hängen bleiben
+            aktive_laeufe.discard(lauf_id)
 
-    # Freigeben als Hintergrundaufgabe der Antwort, nicht im Generator: Trennt der Browser die Verbindung, bevor der
+    # Zusätzlich als Hintergrundaufgabe der Antwort: Trennt der Browser die Verbindung, bevor der
     # erste Block gesendet ist, startet der Generator nie (kein finally) – die Hintergrundaufgabe läuft trotzdem (S1)
     return StreamingResponse(_ablauf(), media_type="text/event-stream",
                              background=BackgroundTask(aktive_laeufe.discard, lauf_id))

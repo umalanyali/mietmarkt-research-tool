@@ -18,7 +18,7 @@ class Konfig(BaseSettings):
     modell_schnell: str = "claude-haiku-5-5"
     ki_budget_eur_pro_lauf: float = 0.50
     ki_eur_je_usd: float = 0.86  # Umrechnungskurs für die Kostenanzeige; Anthropic rechnet in US-Dollar ab
-    # Importierte Portal-Daten (RIWIS, VALUE, Portal-Exporte) gehen nur mit ausdrücklicher Freigabe an Anthropic,
+    # Importierte Portal-Daten (Marktberichte, Angebotsstatistiken, Portal-Exporte) gehen nur mit ausdrücklicher Freigabe an Anthropic,
     # denn ihre Lizenz erlaubt die Weitergabe an Dritte oft nicht. Demo-Daten und selbst erfasste Werte immer.
     ki_portaldaten_senden: bool = False
     # Mietwachstum g p. a. für die Fortschreibung des Mietansatzes bis zum Vermarktungsstart, wenn das Projekt

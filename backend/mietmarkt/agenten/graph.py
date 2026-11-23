@@ -9,6 +9,7 @@ Ablauf:  START → supervisor → <agent> ⇄ <agent>_werkzeuge → validierung 
          eine Rückfrage des Supervisors hält in rueckfrage ⏸ an, die Antwort geht zurück an den supervisor.
 Nach jedem Schritt sichert der Checkpointer den Zustand unter thread_id = Lauf-ID. Ein abgestürzter Lauf geht mit
 ainvoke(None, …) weiter, ein angehaltener mit ainvoke(Command(resume=Freigabe bzw. Antwort), …)."""
+import asyncio
 import base64
 import json
 from typing import Literal
@@ -570,7 +571,8 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
         _, _, dokumente, _ = stammdaten(z)
         verbrauch, auswertung, zeilen = [], [], []
         for d in (d for d in dokumente if d.art in DOKUMENT_AGENTEN["expose"]):
-            seiten = seiten_lesen(ordner(e) / d.pfad, d.art)
+            # im Thread: pdfplumber rechnet synchron und würde sonst alle laufenden Ströme anhalten
+            seiten = await asyncio.to_thread(seiten_lesen, ordner(e) / d.pfad, d.art)
             r = parsen(seiten, d.dateiname, d.quelle_id)
             leer = [f for f, w in r["felder"].items() if w is None] + ([] if r["ausstattung"] else ["ausstattung"])
             verworfen = []

@@ -16,7 +16,7 @@ KATALOG = {
     "kennzahlen.marktkennzahlen.1": {"wert": 17.4, "einheit": "€/m²", "herkunft": "import", "quelle_id": 3,
                                      "bezeichnung": "Angebotsmiete Neubau"},
 }
-QUELLEN = {3: "RIWIS, Stand Q3/2026"}
+QUELLEN = {3: "Marktbericht, Stand Q3/2026"}
 
 
 def saetze(*texte: str, belege: tuple[str, ...] = ("projekt",)) -> list[dict]:
@@ -35,7 +35,7 @@ def test_platzhalter_werden_mit_wert_und_fussnote_gefuellt():
                                   "{{wert:kennzahlen.marktkennzahlen.1}}, erneut {{wert:kennzahlen.comps.median}}.")})
     assert b["abschnitte"]["markt"] == "Median 16,96 €/m²[^1], Marktwert 17,40 €/m²[^2], erneut 16,96 €/m²[^1]."
     assert [(f["nr"], f["herkunft"]) for f in b["fussnoten"]] == [(1, "berechnet"), (2, "import")]
-    assert "Median der sortierten" in b["fussnoten"][0]["verweis"] and "RIWIS" in b["fussnoten"][1]["verweis"]
+    assert "Median der sortierten" in b["fussnoten"][0]["verweis"] and "Marktbericht" in b["fussnoten"][1]["verweis"]
     assert b["markierungen"] == []
 
 

@@ -3,15 +3,15 @@
 // Synthetisch, fiktive Musterstadt.
 
 export const screenshots = [
-  { titel: "Wohnlagenkarte", quelle: "RIWIS", datum: "11.11.2026", status: "geprüft" },
+  { titel: "Wohnlagenkarte", quelle: "Marktbericht", datum: "11.11.2026", status: "geprüft" },
 ];
 
 export const merklisteStart = [
-  { id: "m1", titel: "Angebotsmieten Neubau, Zeitreihe", quelle: "RIWIS", art: "Diagramm", folie: "Mietmarkt" },
-  { id: "m2", titel: "Einwohner, Haushalte, Kaufkraft", quelle: "RIWIS", art: "Kennzahlen", folie: "Standort" },
-  { id: "m3", titel: "Angebotsmiete Neubau 17,40 €/m²", quelle: "VALUE", art: "Kennzahl", folie: "Marktdaten" },
-  { id: "m4", titel: "Comps 1, 3, 9 mit Karte", quelle: "IS24", art: "Tabelle + Karte", folie: "Comps" },
-  { id: "m5", titel: "Wohnlagenkarte", quelle: "RIWIS", art: "Bild", folie: "Standort" },
+  { id: "m1", titel: "Angebotsmieten Neubau, Zeitreihe", quelle: "Marktbericht", art: "Diagramm", folie: "Mietmarkt" },
+  { id: "m2", titel: "Einwohner, Haushalte, Kaufkraft", quelle: "Marktbericht", art: "Kennzahlen", folie: "Standort" },
+  { id: "m3", titel: "Angebotsmiete Neubau 17,40 €/m²", quelle: "Angebotsstatistik", art: "Kennzahl", folie: "Marktdaten" },
+  { id: "m4", titel: "Comps 1, 3, 9 mit Karte", quelle: "Portal", art: "Tabelle + Karte", folie: "Comps" },
+  { id: "m5", titel: "Wohnlagenkarte", quelle: "Marktbericht", art: "Bild", folie: "Standort" },
 ];
 
 /** Bauprojekte im Umfeld des Demo-Standorts (Kartenebene „Projekte“), bis eine echte Quelle angebunden ist */

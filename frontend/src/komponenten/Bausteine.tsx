@@ -1,5 +1,5 @@
 /*
- * Wiederverwendbare Bausteine des Dashboards: Comps- und VALUE-Tabelle, Freigabe-Karte, Herleitungskette, Zustände.
+ * Wiederverwendbare Bausteine des Dashboards: Comps- und Angebotstabelle, Freigabe-Karte, Herleitungskette, Zustände.
  * Struktur und Verhalten stehen hier, das Aussehen in stil/app.css (Klassen mit Präfix „e-“).
  */
 import { useState } from "react";
@@ -110,19 +110,19 @@ export function CompsTabelle({ comps, gemerkt, onStern, ausgewaehlt, onAuswahl }
   );
 }
 
-// ------------------------------------------------------------------ VALUE
+// ------------------------------------------------------------------ Angebotsstatistik
 
 const VALUE_SPALTEN = ["n", "Ø m²", "Min", "Ø", "Median", "P75", "Max"];
 
 /**
- * VALUE-Statistik je Zimmerzahl. Eingabe: Kennzahlen der Gruppe „value_tabelle“ (Zeile = Kategorie, Spalte = Bezeichnung).
+ * Angebotsstatistik je Zimmerzahl. Eingabe: Kennzahlen der Gruppe „angebot_tabelle“ (Zeile = Kategorie, Spalte = Bezeichnung).
  * Ausgabe: Tabelle; jede Zelle zeigt beim Überfahren Herkunft und Rechenweg.
  */
-export function ValueTabelle({ werte }: { werte: Marktkennzahl[] }) {
+export function AngebotTabelle({ werte }: { werte: Marktkennzahl[] }) {
   const zeilen = [...new Set(werte.map((w) => w.kategorie))];
   const zelle = (zeile: string, spalte: string) => werte.find((w) => w.kategorie === zeile && w.bezeichnung === spalte);
   return (
-    <table className="e-tabelle e-value">
+    <table className="e-tabelle e-angebot">
       <thead>
         <tr>
           <th scope="col">Zi.</th>

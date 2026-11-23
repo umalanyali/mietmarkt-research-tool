@@ -1,4 +1,4 @@
-"""K: Importierte Portal-Daten (RIWIS, VALUE, Portal-Exporte) gehen standardmäßig nicht an Anthropic.
+"""K: Importierte Portal-Daten (Marktberichte, Angebotsstatistiken, Portal-Exporte) gehen standardmäßig nicht an Anthropic.
 Erlaubt sind Demo-Daten und selbst erfasste Werte; der Schalter KI_PORTALDATEN_SENDEN gibt alles frei."""
 import datetime as dt
 import json

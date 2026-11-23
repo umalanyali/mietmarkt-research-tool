@@ -72,7 +72,7 @@ export interface Comp {
 
 export interface Marktkennzahl {
   id: number;
-  gruppe: "soziodemografie" | "zeitreihe" | "preisklassen" | "value" | "value_tabelle" | "weitere";
+  gruppe: "soziodemografie" | "zeitreihe" | "preisklassen" | "angebot" | "angebot_tabelle" | "weitere";
   bezeichnung: string;
   kategorie: string;
   gebiet: string;
@@ -157,6 +157,11 @@ async function json<T>(antwort: Response): Promise<T> {
 /** Legt ein Projekt aus einem gewählten Vorschlag an. Eingabe: Vorschlag. Ausgabe: Projekt (oder ApiFehler). */
 export async function projektAnlegen(v: Vorschlag): Promise<Projekt> {
   return json<Projekt>(await fetch("/api/projekte", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(v) }));
+}
+
+/** Öffnet den Demo-Standort Musterstadt; das Backend legt die Demo-Daten an, falls sie fehlen. Ausgabe: Projekt-ID. */
+export async function demoOeffnen(): Promise<number> {
+  return (await json<{ projekt_id: number }>(await fetch("/api/demo", { method: "POST" }))).projekt_id;
 }
 
 /**

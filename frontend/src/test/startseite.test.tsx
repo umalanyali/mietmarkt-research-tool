@@ -14,14 +14,14 @@ const VORSCHLAEGE = [
 const ANTWORTEN: Record<string, unknown> = {
   "/api/adressen/vorschlaege?q=Linden": { vorschlaege: VORSCHLAEGE, attribution: "© OpenStreetMap-Mitwirkende" },
   "/api/projekte": [PROJEKT],
-  "/api/projekte/1": { ...PROJEKT, quellen: [{ id: 1, name: "RIWIS", art: "datei", datei: "x.png", stand: "11/2026", abgerufen_am: "2026-11-11", seite: null }] },
+  "/api/projekte/1": { ...PROJEKT, quellen: [{ id: 1, name: "Marktbericht", art: "datei", datei: "x.png", stand: "11/2026", abgerufen_am: "2026-11-11", seite: null }] },
 };
 
 beforeEach(() => {
   vi.stubGlobal(
     "fetch",
     vi.fn((pfad: string, init?: RequestInit) =>
-      Promise.resolve({ ok: true, status: init?.method === "POST" ? 201 : 200, json: () => Promise.resolve(init?.method === "POST" ? { ...PROJEKT, id: 7 } : ANTWORTEN[pfad]) }),
+      Promise.resolve({ ok: true, status: init?.method === "POST" ? 201 : 200, json: () => Promise.resolve(pfad === "/api/demo" ? { projekt_id: 1 } : init?.method === "POST" ? { ...PROJEKT, id: 7 } : ANTWORTEN[pfad]) }),
     ),
   );
 });
@@ -69,6 +69,13 @@ describe("Startseite", () => {
     expect(await screen.findByText("Analyse geöffnet")).toBeInTheDocument();
     const post = vi.mocked(fetch).mock.calls.find(([, init]) => init?.method === "POST")!;
     expect(JSON.parse(post[1]!.body as string).label).toBe("Lindenallee 42, 12345 Musterstadt");
+  });
+
+  it("„Demo-Standort öffnen“ lädt die Demo und öffnet ihre Analyse", async () => {
+    zeige();
+    fireEvent.click(screen.getByRole("button", { name: "Demo-Standort öffnen" }));
+    expect(await screen.findByText("Analyse geöffnet")).toBeInTheDocument();
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith("/api/demo", expect.objectContaining({ method: "POST" }));
   });
 
   it("Filter haben genau eine Auswahl je Gruppe", () => {

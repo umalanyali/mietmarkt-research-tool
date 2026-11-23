@@ -44,7 +44,7 @@ function Zeile({ b, kuerzel, onEntfernen }: { b: Baustein; kuerzel: string; onEn
 interface Props {
   bausteine: Baustein[];
   onAenderung: (neu: Baustein[]) => void;
-  /** Quellenkürzel je Baustein, z. B. „R“ für RIWIS */
+  /** Quellenkürzel je Baustein, z. B. „M“ für Marktbericht */
   kuerzel: (b: Baustein) => string;
 }
 

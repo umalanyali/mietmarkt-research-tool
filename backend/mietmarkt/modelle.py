@@ -60,7 +60,7 @@ class Quelle(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     projekt_id: int = Field(foreign_key="projekt.id", index=True)
-    name: str  # z. B. „RIWIS“, „VALUE“, „Statistikamt Musterstadt“
+    name: str  # z. B. „Marktbericht“, „Angebotsstatistik“, „Statistikamt Musterstadt“
     art: str  # datei | dienst | manuell
     datei: str | None = None
     stand: str = ""  # Datenstand laut Quelle, z. B. „11/2026“ oder „Q3/2026“
@@ -102,7 +102,7 @@ class Marktkennzahl(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     projekt_id: int = Field(foreign_key="projekt.id", index=True)
-    gruppe: str  # soziodemografie | zeitreihe | preisklassen | value | value_tabelle | weitere
+    gruppe: str  # soziodemografie | zeitreihe | preisklassen | angebot | angebot_tabelle | weitere
     bezeichnung: str
     kategorie: str = ""  # x-Wert, Klasse oder Zimmerzahl, je nach Gruppe
     gebiet: str = ""

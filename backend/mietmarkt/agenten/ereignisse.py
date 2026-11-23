@@ -37,8 +37,9 @@ def ereignisse(modus: str, daten: object) -> list[dict]:
             aus += [{"typ": "werkzeugergebnis", "agent": knoten.removesuffix("_werkzeuge"), "werkzeug": n.name,
                      "ergebnis": lesen(n.content)} for n in update.get("nachrichten", [])]
         elif knoten == "validierung":
+            # ohne „ergebnisse“: Leitplanke hat den Agenten zurückgeschickt (z. B. fehlende DG-Herleitung)
             aus += [{"typ": "agent_fertig", "agent": a, "text": r["text"], "markierungen": r["markierungen"]}
-                    for a, r in update["ergebnisse"].items()]
+                    for a, r in update.get("ergebnisse", {}).items()]
         elif knoten == "rueckfrage":
             aus.append({"typ": "antwort", "antwort": update["antworten"][-1]})
         elif knoten in DOKUMENT_AGENTEN and "ergebnisse" in update:

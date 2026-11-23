@@ -55,7 +55,7 @@ describe("Freigabe-Karte", () => {
 });
 
 describe("Herkunfts-Kennzeichen", () => {
-  const quelle = { id: 3, name: "RIWIS", art: "datei", datei: "riwis.png", stand: "11/2026", abgerufen_am: "2026-11-11", seite: null };
+  const quelle = { id: 3, name: "Marktbericht", art: "datei", datei: "marktbericht.png", stand: "11/2026", abgerufen_am: "2026-11-11", seite: null };
 
   it("zeigt beim Klick Quelle und Rechenweg, Escape schließt", () => {
     render(<HerkunftMarke wert={{ herkunft: "berechnet", rechenweg_text: "9.940 € / 586 m² = 16,96 €/m²" }} quelle={quelle} />);
@@ -63,7 +63,7 @@ describe("Herkunfts-Kennzeichen", () => {
     expect(knopf).toHaveTextContent("Ber");
     expect(screen.queryByRole("note")).toBeNull();
     fireEvent.click(knopf);
-    expect(screen.getByRole("note")).toHaveTextContent("Quelle: RIWIS · Stand 11/2026");
+    expect(screen.getByRole("note")).toHaveTextContent("Quelle: Marktbericht · Stand 11/2026");
     expect(screen.getByRole("note")).toHaveTextContent("Rechenweg: 9.940 € / 586 m² = 16,96 €/m²");
     fireEvent.keyDown(knopf, { key: "Escape" });
     expect(screen.queryByRole("note")).toBeNull();

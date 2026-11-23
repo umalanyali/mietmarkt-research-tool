@@ -63,6 +63,7 @@
 .d-vorschlag-text strong { font-weight: 600; }
 .d-vorschlag-ort { font-size: var(--t-14); color: var(--text-leise); }
 .d-hinweis { position: absolute; top: calc(100% + 8px); left: var(--s6); font-size: var(--t-13); color: var(--text-leise); }
+.d-start-demo { margin-top: var(--s5); text-align: center; }
 .d-start-filter { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s3); margin-top: var(--s6); }
 .d-start-filter .d-pills button { font-size: var(--t-15); padding: 7px var(--s4); min-height: 38px; }
 .d-start-filter { flex-wrap: nowrap; gap: var(--s2); }
@@ -126,7 +127,7 @@
 .d-kpi-vergleich { font-size: var(--t-12); color: var(--text-leise); }
 .d-rd { font-size: var(--t-15); font-weight: 500; color: var(--text-leise); }
 .d-abgelesen { display: inline-block; margin-left: var(--s2); font-size: 10px; font-weight: 600; color: var(--akzent); background: var(--akzent-hell); border-radius: 4px; padding: 0 5px; }
-.d-kpis-2 + .e-value { margin-top: var(--s5); }
+.d-kpis-2 + .e-angebot { margin-top: var(--s5); }
 
 .d-ablage { width: 100%; display: flex; flex-direction: column; align-items: center; gap: var(--s1); padding: var(--s6); border: 1.5px dashed var(--linie-stark); border-radius: 8px; background: var(--flaeche-leicht); cursor: pointer; font-size: var(--t-14); }
 .d-ablage:hover { border-color: var(--akzent); }
@@ -171,9 +172,9 @@
 .app .e-entf { font-size: 10px; color: var(--text-leise); margin-left: 2px; }
 .app .e-stern { color: var(--symbol-leise); }
 .app .e-stern[aria-pressed="true"], .app .e-stern:hover { color: var(--akzent); }
-.app .e-value { font-size: var(--t-12); }
-.app .e-value th, .app .e-value td { padding: 6px 3px; }
-.app .e-value th { font-size: var(--t-11); }
+.app .e-angebot { font-size: var(--t-12); }
+.app .e-angebot th, .app .e-angebot td { padding: 6px 3px; }
+.app .e-angebot th { font-size: var(--t-11); }
 .app .d-agenten-tabelle th { background: none; color: var(--text-leise); border-bottom: 1px solid var(--text); }
 .d-tabellen-fuss { display: flex; justify-content: space-between; gap: var(--s4); margin-top: var(--s4); font-size: var(--t-14); color: var(--text-leise); }
 .d-tabellen-fuss strong { color: var(--text); }
