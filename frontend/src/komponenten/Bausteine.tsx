@@ -96,7 +96,7 @@ export function CompsTabelle({ comps, gemerkt, onStern, ausgewaehlt, onAuswahl }
                 </td>
                 <td className="z" title={c.entfernung_km?.rechenweg_text}>
                   {de(c.entfernung_km?.wert, 1)}
-                  {/* Bis zum Routing (M4) ist jede Entfernung Luftlinie */}
+                  {/* Comp-Entfernungen sind immer Luftlinie; Wegezeiten gibt es nur im Umfeld */}
                   <span className="e-entf">L</span>
                 </td>
                 <td>

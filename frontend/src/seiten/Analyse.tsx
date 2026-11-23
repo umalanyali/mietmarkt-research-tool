@@ -229,7 +229,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
               {de(projekt.umkreis_km, 0)} km importiert sind.
             </p>
             <p className="d-banner-aktionen">
-              <button type="button" className="e-knopf" disabled title="Der Import-Dialog folgt im nächsten Schritt">
+              <button type="button" className="e-knopf" disabled title="Der Import-Dialog ist noch nicht verfügbar">
                 Daten importieren
               </button>
               {demo && (
@@ -376,7 +376,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
                     <strong>{de(zf.dg.wert)} €/m²</strong> <HerkunftMarke wert={zf.dg} /> (n = {de(zf.dg_n.wert, 0)}) ·{" "}
                     {de(zf.anfragen_monat.wert, 1)} <HerkunftMarke wert={zf.anfragen_monat} /> Anfragen je Monat und Inserat
                   </span>
-                  <span className="d-leise">km: L = Luftlinie (Wegezeiten folgen mit M4)</span>
+                  <span className="d-leise">km: L = Luftlinie</span>
                 </div>
               )}
             </div>

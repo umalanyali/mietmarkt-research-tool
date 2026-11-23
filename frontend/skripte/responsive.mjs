@@ -17,7 +17,7 @@ const browser = await chromium.launch({ channel: "chrome", args: ["--enable-unsa
 const fehler = [];
 for (const breite of BREITEN) {
   for (const [name, pfad] of Object.entries(SEITEN)) {
-    const seite = await browser.newPage({ viewport: { width: breite, height: 900 } });
+    const seite = await browser.newPage({ viewport: { width: breite, height: 900 }, deviceScaleFactor: 2 });
     // „load“ statt „networkidle“: die Karte lädt fortlaufend Kacheln nach
     await seite.goto(basis + pfad, { waitUntil: "load" });
     await seite.waitForTimeout(name === "analyse" ? 4000 : 1500);

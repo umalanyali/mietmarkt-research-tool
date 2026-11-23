@@ -1,6 +1,7 @@
 // Nimmt die README-Medien neu auf: node skripte/readme-medien.mjs (braucht ffmpeg, kostet nichts).
 // Startet backend/tests/fake_server.py (Fake-Modell, Umfeld aus dem Cache in daten/mietmarkt.db) und Vite auf eigenen
-// Ports, spielt fünf Szenen ab und schreibt nach docs/screenshots/: lauf.gif + lauf.mp4, umfeld/upload/ergebnis/handy.mp4.
+// Ports, spielt fünf Szenen ab und schreibt nach docs/screenshots/: lauf.gif + lauf.mp4, umfeld/upload/ergebnis/handy.mp4,
+// die Standbilder analyse/startseite/zustaende.png und über skripte/responsive.mjs den Ordner responsive/.
 // Bilder kommen aus Playwright-Screenshots bei deviceScaleFactor 2 (recordVideo und CDP-Screencast liefern nur 1×).
 import { execFileSync, spawn } from "node:child_process";
 import { mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -146,6 +147,10 @@ try {
   await seite.locator(".d-ergebnis").waitFor({ timeout: 60000 });
   await seite.waitForTimeout(1500);
   kodieren(await stopp(), "lauf", true);
+  // Standbild der Analyse-Seite mit fertigem Lauf (vor dem Upload, damit die Unterlagen leer sind)
+  await seite.evaluate(() => window.scrollTo(0, 0));
+  await seite.waitForTimeout(1500);
+  await seite.screenshot({ path: join(ZIEL, "analyse.png"), fullPage: true });
 
   stopp = filmen(seite, "umfeld");
   const karte = seite.locator(".d-karte-bild").filter({ visible: true }).first();
@@ -197,6 +202,11 @@ try {
   await unterlagen.locator(".d-unterlagen-liste li.s-fertig").nth(3).waitFor({ timeout: 60000 });
   await scrolle(seite, 300, 1500);
   kodieren(await stopp(), "upload");
+  for (const [name, pfad] of [["startseite", "/"], ["zustaende", "/zustaende"]]) {
+    await seite.goto(BASIS + pfad, { waitUntil: "networkidle" });
+    await seite.waitForTimeout(1000);
+    await seite.screenshot({ path: join(ZIEL, `${name}.png`), fullPage: true });
+  }
   await desktop.close();
 
   // ---------------------------------------------- Handy: Startseite und Analyse mit dem fertigen Lauf
@@ -217,6 +227,9 @@ try {
   await telefon.waitForTimeout(2000);
   for (let i = 0; i < 5; i++) await scrolle(telefon, 600, 1100);
   kodieren(await stopp(), "handy");
+
+  // Responsive-Bilder und Überlaufprüfung gegen denselben Fake-Server (Umfeld aus dem Cache)
+  execFileSync("node", ["skripte/responsive.mjs"], { stdio: "inherit", env: { ...process.env, APP_URL: BASIS } });
   console.log("README-Medien fertig.");
 } catch (f) {
   console.error(f.message);

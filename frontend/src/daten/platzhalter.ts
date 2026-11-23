@@ -1,5 +1,5 @@
-// Platzhalter für Funktionen späterer Meilensteine, bis die echte Quelle steht. Keine Marktdaten:
-// die Merkliste kommt ab M3 aus der Datenbank, Screenshots ab M5 aus dem Import, Bauprojekte aus einer späteren Quelle.
+// Platzhalter, bis eine echte Quelle angebunden ist: Start-Bausteine der Merkliste, Screenshot-Liste und Bauprojekte.
+// Keine Marktdaten.
 // Synthetisch, fiktive Musterstadt.
 
 export const screenshots = [

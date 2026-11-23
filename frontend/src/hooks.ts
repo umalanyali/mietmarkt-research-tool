@@ -133,7 +133,7 @@ export function useProjektAnlage() {
 }
 
 /**
- * Merkliste und gemerkte Comps (Merkliste noch Platzhalter im Speicher, ab M3 in der Datenbank).
+ * Merkliste und gemerkte Comps (Merkliste nur im Speicher des Browsers, nicht in der Datenbank).
  * Eingabe: Nummern der Comps, die laut Datenbank gemerkt sind; ob die Beispiel-Bausteine erscheinen. Ausgabe: Bausteine mit Setter,
  * Abfrage/Umschalten je Baustein, gemerkte Comp-Nummern mit Umschalter.
  */

@@ -89,7 +89,7 @@ export function Merkliste({ bausteine, onAenderung, kuerzel }: Props) {
         PowerPoint erstellen
       </button>
       <p id="merkliste-export-hinweis" className="etikett merkliste-fuss">
-        {folien} Folien · Export der Merkliste folgt. Den Bericht eines Laufs gibt es als PowerPoint in der Ergebniskarte.
+        {folien} Folien · Export der Merkliste noch nicht verfügbar. Den Bericht eines Laufs gibt es als PowerPoint in der Ergebniskarte.
       </p>
     </div>
   );
