@@ -275,7 +275,7 @@ function AnalyseInhalt({ projekt, comps, kennzahlen }: { projekt: ProjektDetail;
                     <dd className="d-kpi-vergleich">
                       Stadt {zahl(stadt(x.bezeichnung))}
                       {x.einheit && ` ${x.einheit}`}
-                      {x.herkunft === "abgelesen" && <span className="d-abgelesen">abgelesen</span>}
+                      {x.herkunft === "abgelesen" && <span className="d-abgelesen">vom Modell abgelesen</span>}
                     </dd>
                   </div>
                 ))}

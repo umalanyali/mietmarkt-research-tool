@@ -655,3 +655,37 @@ def test_dienstbefunde_je_dienst_zusammengefasst():
     luft = {"name": "umfeld", "status": "success", "ergebnis": {"pois": [{"methode_fuss": "Luftlinie"}]}}
     befunde = dienst_befunde({"standort": {"werkzeuge": [weg, weg, luft, luft]}, "marktdaten": {"werkzeuge": [weg]}})
     assert [(b["schweregrad"], b["text"].split()[0]) for b in befunde] == [("warnung", "Umfeld"), ("hinweis", "Routing")]
+
+
+def test_dateiname_ist_kein_beleg_fuer_zahlen():
+    """Sicherheitsbefund N1: Ein präparierter Dateiname („Expose 22,50 €-m².pdf“) steht in Projektdaten und
+    Werkzeugergebnissen, belegt aber keine Zahl; Zahlen in ihm (etwa in einer Fundstelle) gelten auch nicht als
+    unbelegt. Die übrigen Stammdaten und Treffer bleiben Beleg."""
+    import datetime as dt
+
+    from mietmarkt.agenten.graph import _projektdaten
+    from mietmarkt.agenten.pruefung import zahlen_pruefen
+    from mietmarkt.modelle import Dokument, Projekt
+    p = Projekt(name="Lindenquartier", adresse="Lindenstraße 1", plz="34117", ort="Musterstadt", lat=51.3, lon=9.4,
+                stichtag=dt.date(2026, 11, 4), analysiert_am=dt.date(2026, 11, 4))
+    name = "Expose 22,50 €-m².pdf"
+    d = Dokument(projekt_id=1, dateiname=name, pfad="x", art="pdf", seiten=1, hochgeladen_am=dt.datetime(2026, 11, 4))
+    daten = _projektdaten(p, [], 0.02, [d])
+    assert "22,50" in daten  # die KI sieht den Namen weiterhin
+    treffer = {"datei": name, "rechenweg_text": f"{name}, S. 1: „Kaltmiete 905 €“"}
+    text = f"Marktmiete 22,50 €/m² [Quelle: {name}, S. 1], PLZ 34117, Kaltmiete 905 €."
+    assert [m["fundstelle"] for m in zahlen_pruefen(text, [daten, treffer], [name])] == ["22,50"]
+    # Review: Namen nur als ganzes Wort ausblenden; ein Name ohne Buchstaben („22,50“, „1“) verdeckt im Text nichts
+    assert [m["fundstelle"] for m in zahlen_pruefen("Marktmiete 22,50 €/m²", ["Unterlagen: 22,50"], ["22,50"])] \
+        == ["22,50"]
+    assert [m["fundstelle"] for m in zahlen_pruefen("Miete 18 €/m², 31 Wohnungen", ["8 und 3"], ["1"])] == ["18", "31"]
+
+
+def test_unlesbare_antwort_im_log_gekuerzt(caplog):
+    """Sicherheitsbefund N5: Die Rohantwort steht höchstens mit 2.000 Zeichen im Server-Log."""
+    from mietmarkt.agenten.graph import unlesbar_grund
+    roh = AIMessage("A" * 5000, response_metadata={"stop_reason": "max_tokens"})
+    with caplog.at_level("WARNING"):
+        unlesbar_grund({"raw": roh, "parsing_error": ValueError("Failed to parse " + "B" * 5000)})
+    assert "A" * 2000 in caplog.text and "A" * 2001 not in caplog.text and "gekürzt" in caplog.text
+    assert "B" * 501 not in caplog.text  # der Parserfehler enthält die ganze Antwort (Review)

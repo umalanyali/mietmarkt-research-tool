@@ -200,3 +200,25 @@ def test_fussnote_nennt_zeitraum_gebiet_und_quelle():
     assert b["abschnitte"]["markt"] == "1.240 Wohnungen[^1] fertiggestellt."
     assert b["fussnoten"][0]["verweis"] == ("Baufertigstellungen Wohnungen, 2025, Stadt, "
                                             "Quelle: Statistisches Landesamt, Stand 2025")
+
+
+def test_zahlwoerter_auch_zusammengesetzt():
+    """Sicherheitsbefund M2: auch zusammengesetzte Zahlwörter (achtzehn, dreißig, einundzwanzig, zweihundert…,
+    Million) werden zu [?]; Wörter, die nur Zahlwörter enthalten (Pacht, Jahrhundert, Revier), bleiben stehen."""
+    zahlen = ["achtzehn", "dreißig", "einundzwanzig", "Siebzehn", "zweihundertfünfzig", "dreitausend", "Millionen",
+              "sechsundneunzigsten", "zehnfach", "dreifache", "zweieinhalb", "anderthalb", "dritten", "siebten", "eins",
+              "Achtel", "Zehntel"]
+    b = fuellen_({"markt": saetze(" ".join(zahlen) + " Pacht Nacht beachten Jahrhundert Revier Zweig einmal im Viertel.")})
+    assert [m["fundstelle"] for m in b["markierungen"]] == zahlen
+    assert b["abschnitte"]["markt"].endswith("Pacht Nacht beachten Jahrhundert Revier Zweig einmal im Viertel.")
+
+
+def test_markdown_entschaerft_urls_und_linkdefinitionen():
+    """Sicherheitsbefund N3: nackte URLs (https://, www.) und Linkdefinitionen „[a]: …“ wirken im Export nicht."""
+    p = Projekt(name="Lindenquartier", adresse="Lindenstraße 1", plz="34117", ort="Musterstadt", lat=51.3, lon=9.4,
+                stichtag=dt.date(2026, 11, 4), analysiert_am=dt.date(2026, 11, 4))
+    b = fuellen_({"lage": saetze("[a]: https://fremd.example/x Siehe http://fremd.example und www.fremd.example, "
+                                 "Mail an daten@fremd.example oder mailto:x@fremd.example.")})
+    md = markdown(p, b)
+    assert "://" not in md and "www.fremd" not in md and "@fremd" not in md and "mailto:" not in md
+    assert "\\[a\\]:" in md and "https[:]//fremd.example/x" in md and "www[.]fremd.example" in md

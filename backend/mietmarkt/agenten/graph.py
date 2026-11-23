@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import Engine
 from sqlmodel import Session, select
 
-from ..dokumente import bildgroesse, ordner, seiten_lesen
+from ..dokumente import DokumentUnlesbar, bildgroesse, ordner, seiten_lesen
 from ..expose import ergaenzen, merkmal_ergaenzen, parsen
 from ..format import de
 from ..kennzahlen import wohnungsmix
@@ -36,7 +36,7 @@ from .bericht import anzeigen, beschreibung, fuellen, werte_katalog
 from .dokumente import ablesung, fundstellen_befunde
 from .kosten import kosten_eur
 from .modelle import Modelle
-from .pruefung import zahlen_pruefen
+from .pruefung import dateinamen_entfernen, zahlen_pruefen
 from .werkzeuge import MAX_ANPASSUNGEN, fortschreibung, freigegebene_dokumente, werkzeuge
 from .zustand import AnalyseZustand
 
@@ -453,7 +453,8 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
         # werden daher wie Agenten-Antworten gegen Projektdaten und Werkzeugergebnisse geprüft
         belege = [daten, *z["antworten"]] + [w["ergebnis"] for r in z["ergebnisse"].values()
                                                         for w in r["werkzeuge"] if w["status"] != "error"]
-        markierungen = zahlen_pruefen("\n".join(filter(None, (d.begruendung, d.auftrag, d.rueckfrage))), belege)
+        markierungen = zahlen_pruefen("\n".join(filter(None, (d.begruendung, d.auftrag, d.rueckfrage))), belege,
+                                      [x.dateiname for x in dokumente])
         update |= {"entscheidungen": [d.model_dump() | {"markierungen": markierungen}],
                    "aktiver_agent": None if d.naechster == "fertig" else d.naechster}
         if d.rueckfrage:
@@ -524,7 +525,9 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
         belege = [nachrichten[0].text, *z["antworten"]] + [w["ergebnis"] for w in eigene + frueher
                                                             if w["status"] != "error"]
         texte = "\n".join(n.text for n in nachrichten if isinstance(n, AIMessage) and n.text)
-        ergebnis = {"text": nachrichten[-1].text, "werkzeuge": eigene, "markierungen": zahlen_pruefen(texte, belege)}
+        _, _, dokumente, _ = stammdaten(z)
+        ergebnis = {"text": nachrichten[-1].text, "werkzeuge": eigene,
+                    "markierungen": zahlen_pruefen(texte, belege, [d.dateiname for d in dokumente])}
         if z["aktiver_agent"] != "mietansatz":
             return {"ergebnisse": {z["aktiver_agent"]: ergebnis}}
         # dict-Comprehension: je Basis gewinnt die letzte erfolgreiche Herleitung
@@ -580,7 +583,11 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
         verbrauch, auswertung, zeilen = [], [], []
         for d in (d for d in dokumente if d.art in DOKUMENT_AGENTEN["expose"]):
             # im Thread: pdfplumber rechnet synchron und würde sonst alle laufenden Ströme anhalten
-            seiten = await asyncio.to_thread(seiten_lesen, ordner(e) / d.pfad, d.art)
+            try:
+                seiten = await asyncio.to_thread(seiten_lesen, ordner(e) / d.pfad, d.art)
+            except DokumentUnlesbar as f:  # z. B. Zeitlimit unter Last: nur diese Unterlage fehlt, der Lauf geht weiter
+                zeilen.append(f"{d.dateiname}: nicht lesbar ({f})")
+                continue
             r = parsen(seiten, d.dateiname, d.quelle_id)
             leer = [f for f, w in r["felder"].items() if w is None] + ([] if r["ausstattung"] else ["ausstattung"])
             verworfen = []
@@ -663,7 +670,7 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
         for w, args in zip(wz["pruefung"], ({}, {"ansatz_eur_qm": herleitung["ergebnis"]["wert"]}), strict=True):
             eigene.append({"name": w.name, "argumente": args, "status": "success",
                            "ergebnis": lesen(await w.ainvoke({"projekt_id": z["projekt_id"], **args}))})
-        *_, daten = stammdaten(z)
+        _, _, dokumente, daten = stammdaten(z)
         eingabe = (f"{daten}\n\nFreigegebene Herleitungen: {json.dumps(herleitungen, ensure_ascii=False)}\n\n"
                    f"Prüfergebnisse: {json.dumps([w['ergebnis'] for w in eigene], ensure_ascii=False)}")
         antwort = await pruefer.ainvoke([SystemMessage(PROMPTS["pruefung"]), HumanMessage(eingabe)])
@@ -671,9 +678,10 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
         if antwort["parsed"] is None:
             return {**update, "abbruch": "Antwort des Prüf-Agenten war nicht lesbar"}
         belege = [daten, herleitungen] + [w["ergebnis"] for w in eigene]
-        befunde = [b.model_dump() | {"markierungen": zahlen_pruefen(b.text, belege)} for b in antwort["parsed"].befunde
+        namen = [d.dateiname for d in dokumente]
+        befunde = [b.model_dump() | {"markierungen": zahlen_pruefen(b.text, belege, namen)} for b in antwort["parsed"].befunde
                    if b.pruefung not in ("dienst", "fundstelle")]
-        befunde += dienst_befunde(z["ergebnisse"]) + fundstellen_befunde(z["ergebnisse"], daten)
+        befunde += dienst_befunde(z["ergebnisse"]) + fundstellen_befunde(z["ergebnisse"], dateinamen_entfernen(daten, namen))
         text = "\n".join(f"{b['schweregrad']}: {b['text']}" for b in befunde) or "Keine Befunde."
         update |= {"pruefungen": [befunde], "ergebnisse": {"pruefung": {
             "text": text, "werkzeuge": eigene, "markierungen": [x for b in befunde for x in b["markierungen"]]}}}
@@ -696,7 +704,10 @@ def baue_graph(m: Modelle, e: Engine, k: Konfig, checkpointer: BaseCheckpointSav
         with Session(e) as s:
             quellen = {q.id: f"{q.name}, Stand {q.stand}" if q.stand else q.name
                        for q in s.exec(select(Quelle).where(Quelle.projekt_id == p.id))}
-        zeilen = [f"{{{{wert:{i}}}}} = {anzeigen(w)} – {beschreibung(w, quellen)[:200]}" for i, w in katalog.items()]
+        # Bei Bildwerten steht die Bezeichnung des Vision-Modells nur hier im Prompt, nicht in der Fußnote (M3)
+        zeilen = [f"{{{{wert:{i}}}}} = {anzeigen(w)} – "
+                  f"{f'{w['bezeichnung']} (laut Modell), ' if w.get('bezeichnung') and w['herkunft'] == 'abgelesen' else ''}"
+                  f"{beschreibung(w, quellen)[:200]}" for i, w in katalog.items()]
         nummeriert = "\n".join(f"befund:{i} – {b['schweregrad']}: {b['text']}" for i, b in enumerate(befunde, 1))
         eingabe = (f"{daten}\n\nErgebnisse (ergebnis:<agent>):\n{_ergebnistexte(z)}\n\nBefunde der Prüfung:\n"
                    f"{nummeriert or 'keine'}\n\nWerte-Katalog:\n" + "\n".join(zeilen))
@@ -789,7 +800,10 @@ def unlesbar_grund(antwort: dict) -> str:
     stopp = roh.response_metadata.get("stop_reason", "unbekannt")
     token = (roh.usage_metadata or {}).get("output_tokens", 0)
     logger.warning("Unlesbare Modellantwort: stop_reason=%s, Ausgabe-Token=%s, Fehler=%s\nRohantwort:\n%s",
-                   stopp, token, antwort.get("parsing_error"), roh.text)
+                   # der Parserfehler zitiert die ganze Antwort, daher ebenfalls gekürzt
+                   stopp, token, str(antwort.get("parsing_error"))[:500],
+                   # gekürzt: die Antwort kann ganze Unterlagen wiedergeben, die nicht vollständig ins Log gehören (N5)
+                   roh.text[:2000] + (f"\n… gekürzt, {len(roh.text)} Zeichen" if len(roh.text) > 2000 else ""))
     return f"stop_reason {stopp}, {de(token, 0)} Ausgabe-Token"
 
 

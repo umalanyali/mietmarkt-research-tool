@@ -138,6 +138,8 @@ def test_ablesung_nur_mit_zahl_und_ausschnitt_im_bild():
                     "diagramm": True}, (40, 20), "t.png", 3)
     assert (gut.wert, gut.herkunft, gut.ausschnitt) == (2.1, Herkunft.ABGELESEN, [10, 5, 20, 8])
     assert "rd., aus Diagramm" in gut.rechenweg_text
+    # Sicherheitsbefund M3: sichtbar als Modell-Ablesung, die Bezeichnung des Modells nicht in Rechenweg/Fußnote
+    assert gut.rechenweg_text.startswith("vom Modell abgelesen") and "Leerstand" not in gut.rechenweg_text
     from mietmarkt.agenten.bericht import anzeigen
     assert anzeigen(gut.model_dump(mode="json")) == "rd. 2,1 %"  # aus Diagrammen nur ungefähr
     for falsch in ({"wert": "k. A.", "ausschnitt": [0, 0, 5, 5]}, {"wert": "2", "ausschnitt": [30, 0, 20, 5]},
@@ -180,3 +182,14 @@ def test_ausstattung_mit_verneinung_und_wortgrenzen(text, erwartet):
     """Parser: Verneinung im selben Satzteil („keine“, „ohne“, „nicht enthalten“) und ganze Wörter (Gartenseite ist
     kein Garten). Funde aus den Testdaten (testdaten/unterlagen)."""
     assert {a["merkmal"] for a in parsen([text], "e.pdf", 1)["ausstattung"]} == erwartet
+
+
+def test_pdf_lesen_mit_zeitlimit(tmp_path, monkeypatch):
+    """Sicherheitsbefund N4: Dauert das Auslesen länger als PDF_ZEIT_S (präpariertes PDF), gilt es als unlesbar."""
+    import mietmarkt.dokumente as d
+    datei = tmp_path / "e.pdf"
+    datei.write_bytes(pdf(EXPOSE))
+    assert d.seiten_lesen(datei, "pdf")[0].startswith("Musterweg 4")
+    monkeypatch.setattr(d, "PDF_ZEIT_S", 0.001)  # schon der Start des Unterprozesses dauert länger
+    with pytest.raises(d.DokumentUnlesbar, match="Zeitlimit"):
+        d.seiten_lesen(datei, "pdf")

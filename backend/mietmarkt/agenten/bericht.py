@@ -7,11 +7,21 @@ from ..format import de
 from .pruefung import ZAHL
 
 PLATZHALTER = re.compile(r"\{\{\s*wert:\s*([^}]*?)\s*\}\}")
-# Zahlwörter und Brüche zählen wie Ziffern. „ein/eine“ fehlt (Artikel), „Viertel“ nur als Bruch („ein Viertel“),
-# sonst ist es meist ein Stadtviertel.
-ZAHLWORT = re.compile(r"\b(?:(?:zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)(?:te[nrms]?|fach)?|"
-                      r"(?:zwan|drei|vier|fünf|sech|sieb|acht|neun)zig|hundert|tausend|dutzend|hälfte|drittel|"
-                      r"doppelt|(?:ein|eine[mr]?)\s+viertel)\b|[½¼¾⅓⅔⁰¹²³⁴⁵⁶⁷⁸⁹](?<!m²)", re.IGNORECASE)
+# Zahlwörter und Brüche zählen wie Ziffern, auch zusammengesetzt (einundzwanzig, zweihundertfünfzig, dreitausend).
+# Nur ganze Wörter nach der Zahlwort-Grammatik, sonst träfe „acht“ auch „Pacht“. „ein/eine“ allein fehlt (Artikel),
+# „Viertel“ nur als Bruch („ein Viertel“), sonst ist es meist ein Stadtviertel.
+_E = "zwei|drei|vier|fünf|sechs|sieben|acht|neun"
+_ZIG = "zwanzig|dreißig|vierzig|fünfzig|sechzig|siebzig|achtzig|neunzig"
+_TEEN = "zehn|elf|zwölf|dreizehn|vierzehn|fünfzehn|sechzehn|siebzehn|achtzehn|neunzehn"
+_U100 = f"(?:(?:ein|{_E})und)?(?:{_ZIG})|{_TEEN}|ein|{_E}"
+_H = f"(?:ein|{_E})?hundert(?:und)?(?:{_U100})?"
+_T = f"(?:{_H}|{_U100})?tausend(?:und)?(?:{_H}|{_U100})?"
+# Endungen: Ordinalzahl (zehnte), Bruch (Zehntel), Vielfaches (dreifache), „-mal“
+_WORT = (f"(?:{_T}|{_H}|(?:(?:ein|{_E})und)?(?:{_ZIG})|{_TEEN}|{_E})(?:s?te[nrms]?|s?tel|fache?[nrms]?|mal)?|"
+         # unregelmäßig: dritte, siebte (nicht „achte“: meist das Verb), Achtel, eins, zweieinhalb, anderthalb
+         f"(?:dritt|siebt)e[nrms]?|(?:dritt|sieb|ach)tel|eins|(?:ein|{_E})einhalb|anderthalb")
+ZAHLWORT = re.compile(rf"\b(?!viertel\b)(?:{_WORT}|million(?:en)?|milliarden?|dutzend|hälfte|drittel|doppelt|"
+                      r"(?:ein|eine[mr]?)\s+viertel)\b|[½¼¾⅓⅔⁰¹²³⁴⁵⁶⁷⁸⁹](?<!m²)", re.IGNORECASE)
 # Quellen- und Verfahrenshinweise, die als Klammerzusatz in Rechenwegen stehen und unter „Methoden“ einmal erklärt
 # werden: (Muster für den Klammerinhalt, Text der Methode; {} = erste Gruppe bzw. ganzer Inhalt). Andere Klammern – Formeln, „keine Zu- oder Abschläge“,
 # Zeiträume – bleiben in der Fußnote.

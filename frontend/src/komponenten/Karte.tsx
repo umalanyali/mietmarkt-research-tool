@@ -1,9 +1,15 @@
 // Karte des Dashboards (MapLibre): Projektstandort, Umkreisringe, Comps mit Gruppen-Markern, Ebenen und Lade-/Fehlerzustand.
 import { useEffect, useMemo, useRef, useState } from "react";
-import maplibregl, { type Map as MLMap, type Marker } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import type { Map as MLMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+// MapLibre 6 sucht seinen Worker neben der eigenen Datei; Vite bündelt die Bibliothek aber um (404 im Dev-Server).
+// ?url liefert die richtige Adresse, im Dev-Server wie im Build.
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import type { Comp } from "../api";
 import { KARTENSTIL } from "./kartenstil";
+
+maplibregl.setWorkerUrl(workerUrl);
 
 export type Ebene = "Comps" | "Projekte" | "ÖPNV" | "Nahversorgung" | "Wohnlage";
 export const EBENEN: Ebene[] = ["Comps", "Projekte", "ÖPNV", "Nahversorgung", "Wohnlage"];

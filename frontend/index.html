@@ -3,7 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Bilder und Verbindungen nur zur eigenen App (API über den Proxy) und zu den Kartenkacheln von OpenFreeMap; data:
+         und blob: brauchen MapLibre und sein CSS. Schützt davor, dass Modelltext Daten an fremde Adressen schickt (M1). -->
+    <meta http-equiv="Content-Security-Policy" content="img-src 'self' data: blob:; connect-src 'self' https://tiles.openfreemap.org; object-src 'none'; base-uri 'self'; form-action 'self'" />
     <title>Mietmarkt Research</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>
     <div id="root"></div>

@@ -1,6 +1,5 @@
 // Vite-Konfiguration: Dev-Server auf Port 5173 mit Weiterleitung von /api an das Backend, dazu vitest in jsdom.
-/// <reference types="vitest" />
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({

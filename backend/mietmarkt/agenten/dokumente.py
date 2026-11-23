@@ -22,11 +22,13 @@ def ablesung(a: dict, groesse: tuple[int, int], datei: str, quelle_id: int | Non
     if x is None or len(aus) != 4 or min(aus) < 0 or not (aus[2] and aus[3]) or \
             aus[0] + aus[2] > groesse[0] or aus[1] + aus[3] > groesse[1]:
         return None
-    art = "rd., aus Diagramm abgelesen" if a.get("diagramm") else "aus Tabelle abgelesen"
+    art = "rd., aus Diagramm" if a.get("diagramm") else "aus Tabelle"
     return Wert(wert=x, einheit=a.get("einheit", ""), herkunft=Herkunft.ABGELESEN, quelle_id=quelle_id,
                 ausschnitt=list(aus), fundstelle=f"Ausschnitt x {aus[0]}, y {aus[1]}, {aus[2]} × {aus[3]} px",
-                rechenweg_text=f"{a['bezeichnung']}: {art} aus {datei}, Ausschnitt x {aus[0]}, y {aus[1]}, "
-                               f"{aus[2]} × {aus[3]} px")
+                # Die Bezeichnung stammt vom Modell (ein präpariertes Bild kann sie vorgeben) und gehört daher nicht
+                # in Rechenweg und Fußnote; „vom Modell abgelesen“ macht sichtbar, dass niemand den Wert geprüft hat
+                rechenweg_text=f"vom Modell abgelesen ({art}) aus {datei}, Ausschnitt x {aus[0]}, y {aus[1]}, "
+                               f"{aus[2]} × {aus[3]} px – bitte am Bildausschnitt prüfen")
 
 
 def _aus_dokument(satz: str, doktext: str, andere: str) -> bool:

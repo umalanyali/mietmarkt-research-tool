@@ -19,9 +19,12 @@ def _kopf(p: Projekt) -> str:
     return f"{p.adresse}, {p.plz} {p.ort} · Stichtag {p.stichtag:%d.%m.%Y}"
 
 
-# Nur was in Markdown wirkt, wird maskiert: Bild- und Linkbeginn „![“, Link- und Referenzklammer „](“ bzw. „][“,
-# HTML-Tags und Autolinks „<x…“ sowie Code-Backticks. Gewöhnliche Klammern bleiben lesbar.
-WIRKSAM = re.compile(r"!(?=\[)|\[(?=[^\]]*\]\s*[(\[])|\](?=\s*[(\[])|<(?=[A-Za-z/!?])|`")
+# Nur was in Markdown wirkt, wird maskiert: Bild- und Linkbeginn „![“, Link-, Referenzklammer und Linkdefinition
+# „](“, „][“ bzw. „]:“, HTML-Tags und Autolinks „<x…“ sowie Code-Backticks. Gewöhnliche Klammern bleiben lesbar.
+WIRKSAM = re.compile(r"!(?=\[)|\[(?=[^\]]*\]\s*[(\[:])|\](?=\s*[(\[:])|<(?=[A-Za-z/!?])|`")
+# Nackte URLs und E-Mail-Adressen macht GFM klickbar; entschärft („https[:]//“, „www[.]“, „mailto[:]“, „a[@]b.de“)
+# bleiben sie lesbar, aber kein Link. Ersetzt wird immer das letzte Zeichen des Treffers.
+URL = re.compile(r"(?i)\b\w+:(?=//)|\bwww\.|\bmailto:|(?<=\w)@(?=[\w-]+\.)")
 
 
 def _md(text: str) -> str:
@@ -32,7 +35,12 @@ def _md(text: str) -> str:
     Zeilenumbrüche werden zu Leerzeichen, damit kein Satz eine Überschrift, Liste oder Linkdefinition beginnt.
     """
     teile = re.split(r"(\[\^\d+\])", " ".join(text.splitlines()))  # ungerade Stellen: eigene Fußnotenzeichen
-    return "".join(t if i % 2 else WIRKSAM.sub(lambda m: "\\" + m.group(0), t) for i, t in enumerate(teile))
+    def maskieren(t: str) -> str:
+        """Maskiert ein Textstück. Eingabe: Text ohne eigene Fußnotenzeichen. Ausgabe: maskierter Text."""
+        t = WIRKSAM.sub(lambda m: "\\" + m.group(0), t)
+        return URL.sub(lambda m: f"{m[0][:-1]}[{m[0][-1]}]", t)  # nach WIRKSAM, damit „[:]“ so bleibt
+
+    return "".join(t if i % 2 else maskieren(t) for i, t in enumerate(teile))
 
 
 def _hinweise(b: dict) -> str:

@@ -1,6 +1,7 @@
 """Unterlagen des Nutzers: Dateityp am Inhalt erkennen, Text seitenweise lesen, in überlappende Abschnitte teilen und
 im SQLite-Volltextindex (FTS5) ablegen und durchsuchen. Rechnet nichts; die Agenten zitieren Datei und Seite."""
 import io
+import multiprocessing
 import re
 from pathlib import Path
 
@@ -13,6 +14,9 @@ from .modelle import Dokument
 
 MAX_KANTE = 8000  # Pixel; größere Bilder nimmt die Anthropic-API nicht an
 MAX_SEITEN = 100  # mehr ist für ein Exposé untypisch und bremst pdfplumber (Schutz vor präparierten PDFs)
+PDF_ZEIT_S = 30  # länger braucht ein echtes Exposé nicht; präparierte PDFs (Flate-Bomben) halten sonst den Server auf
+# shortcut: kein Speicherlimit für den Unterprozess (RLIMIT_AS lässt macOS nicht zu, Windows kennt es nicht); eine
+# Flate-Bombe kann binnen PDF_ZEIT_S viel Speicher belegen. Aufrüsten, falls Unterlagen aus fremden Quellen kommen.
 KOEPFE = {b"%PDF-": "pdf", b"\x89PNG\r\n\x1a\n": "png", b"\xff\xd8\xff": "jpg"}
 
 
@@ -70,6 +74,20 @@ def seiten_lesen(pfad: Path, art: str) -> list[str]:
             return [roh.decode("cp1252")]
     if art != "pdf":
         return []
+    # Eigener Prozess statt Thread: nur einen Prozess kann man nach dem Zeitlimit wirklich beenden (das with-Ende
+    # ruft terminate()), und sein Speicher ist danach wieder frei. „spawn“ startet ohne Kopie des Serverzustands.
+    with multiprocessing.get_context("spawn").Pool(1) as pool:
+        try:
+            return pool.apply_async(_pdf_seiten, (pfad,)).get(timeout=PDF_ZEIT_S)
+        except multiprocessing.TimeoutError:
+            raise DokumentUnlesbar(f"PDF nicht lesbar (Zeitlimit {PDF_ZEIT_S} s überschritten)") from None
+
+
+def _pdf_seiten(pfad: Path) -> list[str]:
+    """Text je PDF-Seite, läuft im Unterprozess von seiten_lesen. Eingabe: Datei. Ausgabe: Liste.
+
+    Wirft DokumentUnlesbar bei beschädigtem PDF oder mehr als MAX_SEITEN Seiten.
+    """
     try:
         with pdfplumber.open(pfad) as pdf:
             if len(pdf.pages) > MAX_SEITEN:

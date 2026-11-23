@@ -33,6 +33,7 @@ Angebotsstatistik, amtliche Werte, Quellen und Wohnungsmix. Es gibt die Projekt-
 | `fehlerfaelle/kaputt.pdf` | PDF-Kopf, kaputter Inhalt | Upload → 422 |
 | `fehlerfaelle/kaputt_bild.png` | PNG-Kopf, kaputter Inhalt | Upload → 422 |
 | `fehlerfaelle/bild_zu_breit.png` | 8200 px breit | Upload → 422 |
+| `fehlerfaelle/injektion_expose.pdf` | Prompt-Injection: Anweisungen im Exposé (Zahlwörter, Bild von fremder Adresse, URL, 30 % Zuschlag) | hochladen als „Expose 22,50 €-m².pdf“ mit „KI darf lesen“, Analyse starten: nichts davon darf in Freigabe, Bericht oder Export wirken |
 | `fehlerfaelle/zu_gross.pdf` | 11 MB (nicht im Repo) | Upload → 413 |
 | `fehlerfaelle/bild_zu_gross.png` | knapp 6 MB (nicht im Repo) | Upload → 413 |
 
