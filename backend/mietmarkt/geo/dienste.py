@@ -18,8 +18,10 @@ USER_AGENT = "MietmarktResearch/0.1 (privates Projekt)"  # CLAUDE.md Regel 6
 ATTRIBUTION = "© OpenStreetMap-Mitwirkende"
 PHOTON_URL = "https://photon.komoot.io/api/"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org"
-OVERPASS_TIMEOUT_S = 25  # so lange wartet der Client je Server, dann ist der nächste dran
-OVERPASS_RECHENZEIT_S = 20  # Limit, das Overpass sich selbst setzt; kleiner, damit die Antwort vor dem Timeout kommt
+# Kurz gehalten: eine gesunde Antwort kommt in 1–3 s; ein überlasteter Server hängt sonst lange (Messung 11/2026)
+OVERPASS_TIMEOUT_S = 10  # so lange wartet der Client je Server, dann ist der nächste dran
+OVERPASS_RECHENZEIT_S = 8  # Limit, das Overpass sich selbst setzt; kleiner, damit die Antwort vor dem Timeout kommt
+OVERPASS_BACKOFF_S = 2.0  # Pause, bevor alle Server ein zweites (letztes) Mal gefragt werden
 # Der OSRM-Demo-Server (router.project-osrm.org) kennt nur das Autoprofil und liefert für „foot“ Autozeiten.
 # Die FOSSGIS-Instanzen sprechen dieselbe OSRM-API, aber mit echten Fuß- und Radprofilen.
 ROUTING_URL = {"fuss": "https://routing.openstreetmap.de/routed-foot", "rad": "https://routing.openstreetmap.de/routed-bike"}
@@ -32,7 +34,7 @@ class DienstNichtErreichbar(Exception):
     def __init__(self, dienst: str, grund: str):
         """Eingabe: Dienstname, Grund (Fehlermeldung). Ausgabe: Ausnahme mit lesbarem Text."""
         super().__init__(f"{dienst} nicht erreichbar: {grund}")
-        self.dienst = dienst
+        self.dienst, self.grund = dienst, grund
 
 
 class Drossel:
@@ -72,15 +74,16 @@ _laufend: dict[tuple[int, str], asyncio.Lock] = {}
 
 
 async def _abrufen[T](s: Session, dienst: str, url: str, auswerten: Callable[[object, dt.date], T], *, params: dict | None = None,
-                      daten: dict | None = None, drossel: Drossel | None = None, timeout: float = 10.0) -> T:
+                      daten: dict | None = None, drossel: Drossel | None = None, timeout: float = 10.0,
+                      cache_schluessel: dict | None = None) -> T:
     """Fragt einen Dienst ab, mit Cache, optionaler Drossel und Auswertung.
 
     Eingabe: Sitzung (Cache), Dienstname, URL, Auswertungsfunktion für JSON und Abrufdatum, Query-Parameter oder Formulardaten
-    (dann POST), Drossel, Timeout in s.
+    (dann POST), Drossel, Timeout in s, eigener Cache-Schlüssel (sonst URL, Parameter und Daten).
     Ausgabe: ausgewertete Antwort. Netzwerkfehler und Antworten, die sich nicht auswerten lassen, werden zu
     DienstNichtErreichbar und landen nicht im Cache.
     """
-    anfrage = {"url": url, "params": params, "daten": daten}
+    anfrage = cache_schluessel or {"url": url, "params": params, "daten": daten}
     schluessel = (id(asyncio.get_running_loop()), cache.schluessel(anfrage))
     sperre = _laufend.setdefault(schluessel, asyncio.Lock())
     async with sperre:
@@ -96,8 +99,15 @@ async def _abrufen[T](s: Session, dienst: str, url: str, auswerten: Callable[[ob
                     antwort.raise_for_status()
                     json = antwort.json()
                 ergebnis = auswerten(json, dt.date.today())  # erst prüfen, dann cachen: eine kaputte Antwort soll nicht 30 Tage bleiben
-            except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError) as e:
-                raise DienstNichtErreichbar(dienst, str(e) or type(e).__name__) from e
+            except httpx.HTTPStatusError as e:
+                grund = f"HTTP {e.response.status_code} {e.response.reason_phrase}"
+                raise DienstNichtErreichbar(dienst, grund) from e
+            except httpx.TimeoutException as e:
+                raise DienstNichtErreichbar(dienst, f"keine Antwort binnen {timeout:g} s") from e
+            except httpx.HTTPError as e:  # Verbindung abgelehnt, DNS, TLS …
+                raise DienstNichtErreichbar(dienst, f"keine Verbindung ({type(e).__name__})") from e
+            except (ValueError, KeyError, TypeError, IndexError) as e:
+                raise DienstNichtErreichbar(dienst, f"unlesbare Antwort ({str(e) or type(e).__name__})") from e
             cache.schreiben(s, dienst, anfrage, json)
             return ergebnis
         finally:
@@ -221,20 +231,28 @@ async def umfeld_pois(lat: float, lon: float, s: Session, radius_m: int = 1000) 
     """Haltestellen, Supermärkte, Schulen, Kitas und Ärzte im Radius.
 
     Eingabe: Mittelpunkt, Sitzung, Radius in m. Ausgabe: POIs in Antwort-Reihenfolge; Wege/Flächen über ihren Mittelpunkt.
-    Fragt die Server aus Konfig.overpass_urls der Reihe nach; erst wenn alle ausfallen, DienstNichtErreichbar.
+    Fragt die Server aus Konfig.overpass_urls der Reihe nach; fallen alle aus, nach OVERPASS_BACKOFF_S eine zweite
+    Runde. Danach DienstNichtErreichbar mit dem Grund je Server.
     """
     teile = "".join(f"{f}(around:{radius_m},{lat},{lon});" for filter_ in KATEGORIEN.values() for f in filter_)
     abfrage = f"[out:json][timeout:{OVERPASS_RECHENZEIT_S}];({teile});out center tags;"
+    # Cache je Standort statt je Server und Abfragetext: liefert ein anderer Server oder ändert sich das Zeitlimit,
+    # bleibt der Treffer gültig und der erste Aufruf antwortet sofort aus dem Cache, ohne auf einen Ausfall zu warten
+    standort = {"lat": lat, "lon": lon, "radius_m": radius_m, "filter": KATEGORIEN}
     urls = Konfig().overpass_urls
-    for i, url in enumerate(urls):
-        host = httpx.URL(url).host
-        try:
-            return await _abrufen(s, "overpass", url, lambda d, stand, host=host: _pois_aus(d, host, stand),
-                                  daten={"data": abfrage}, drossel=OVERPASS_DROSSEL, timeout=OVERPASS_TIMEOUT_S)
-        except DienstNichtErreichbar:
-            if i == len(urls) - 1:
-                raise
-    raise DienstNichtErreichbar("overpass", "kein Server in OVERPASS_URLS")
+    gruende = []
+    for runde in (1, 2):
+        if runde == 2:
+            await asyncio.sleep(OVERPASS_BACKOFF_S)
+        for url in urls:
+            host = httpx.URL(url).host
+            try:
+                return await _abrufen(s, "overpass", url, lambda d, stand, host=host: _pois_aus(d, host, stand),
+                                      daten={"data": abfrage}, drossel=OVERPASS_DROSSEL, timeout=OVERPASS_TIMEOUT_S,
+                                      cache_schluessel=standort)
+            except DienstNichtErreichbar as e:
+                gruende.append(f"{host}: {e.grund}")
+    raise DienstNichtErreichbar("Overpass", "; ".join(gruende) or "kein Server in OVERPASS_URLS")
 
 
 def _pois_aus(daten: dict, host: str, stand: dt.date) -> list[Poi]:

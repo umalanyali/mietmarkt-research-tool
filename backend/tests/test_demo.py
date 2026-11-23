@@ -7,7 +7,8 @@ from sqlmodel import Session, select
 
 from mietmarkt.db import engine
 from mietmarkt.demo import demo_oeffnen, seed
-from mietmarkt.modelle import Comp, Marktkennzahl, Projekt, Quelle
+from mietmarkt.geo import cache
+from mietmarkt.modelle import Comp, GeoCache, Marktkennzahl, Projekt, Quelle
 
 
 def test_seed_legt_projekte_comps_und_kennzahlen_an(tmp_path):
@@ -63,3 +64,14 @@ def test_demo_oeffnen_ergaenzt_ohne_zu_loeschen(tmp_path):
         namen = [p.name for p in s.exec(select(Projekt)).all()]
         assert erste == zweite and s.get(Projekt, erste).name == "Lindenquartier"
     assert namen == ["Eigenes", "Lindenquartier", "Hafenblock", "Am Stadtpark"]
+
+
+def test_seed_behaelt_geodienst_cache(tmp_path):
+    """Ein neuer Seed löscht die Antworten von Overpass und OSRM nicht: die Demo läuft danach ohne Overpass."""
+    e = engine(tmp_path / "t.db")
+    seed(e)
+    with Session(e) as s:
+        cache.schreiben(s, "overpass", {"url": "x"}, {"elements": []})
+    seed(e)
+    with Session(e) as s:
+        assert len(s.exec(select(GeoCache)).all()) == 1

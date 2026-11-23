@@ -31,7 +31,7 @@ export function UmfeldKarte({ umfeld, nochmal }: { umfeld: Ladezustand<Umfeld>; 
       {umfeld.status === "fehler" && (
         <FehlerZustand
           titel={umfeld.http === 503 ? "Dienst nicht erreichbar" : "Umfeld konnte nicht geladen werden"}
-          text={umfeld.http === 503 ? "Overpass (OpenStreetMap) antwortet gerade nicht. Die übrigen Daten bleiben nutzbar." : umfeld.meldung}
+          text={umfeld.http === 503 ? `${umfeld.meldung}. Die übrigen Daten bleiben nutzbar.` : umfeld.meldung}
           onAktion={nochmal}
         />
       )}

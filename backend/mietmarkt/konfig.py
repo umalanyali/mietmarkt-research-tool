@@ -24,9 +24,9 @@ class Konfig(BaseSettings):
     # Mietwachstum g p. a. für die Fortschreibung des Mietansatzes bis zum Vermarktungsstart, wenn das Projekt
     # keinen eigenen Wert hat (0.02 = 2 %)
     mietwachstum_pa: float = 0.02
-    # Overpass-Server für das Umfeld, in dieser Reihenfolge; fällt einer aus, kommt der nächste dran. Standard ohne
-    # Ersatzserver: Projektkoordinaten gehen nur an weitere Server, wenn der Nutzer sie in .env einträgt (JSON-Liste)
-    overpass_urls: list[str] = ["https://overpass-api.de/api/interpreter"]
+    # Overpass-Server für das Umfeld, in dieser Reihenfolge; fällt einer aus, kommt der nächste dran (JSON-Liste in
+    # .env). overpass.kumi.systems fehlt, weil es nur ein DNS-Alias auf private.coffee ist (kein zusätzlicher Rechner)
+    overpass_urls: list[str] = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"]
 
     @property
     def ki_konfiguriert(self) -> bool:

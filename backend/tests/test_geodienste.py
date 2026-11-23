@@ -1,10 +1,12 @@
 """Geodienste (Photon, Nominatim, Overpass, OSRM): nur gegen respx-Mocks, nie echt. Drosselung, Cache, Ausfälle."""
 import asyncio
+import contextvars
 import datetime as dt
 import itertools
 import json
 import threading
 import time
+import types
 
 import httpx
 import pytest
@@ -41,8 +43,9 @@ def s(tmp_path):
 
 
 @pytest.fixture(autouse=True)
-def drosseln_zuruecksetzen():
-    """Jeder Test beginnt ohne Wartezeit aus dem vorherigen Test."""
+def drosseln_zuruecksetzen(monkeypatch):
+    """Jeder Test beginnt ohne Wartezeit aus dem vorherigen Test; die Overpass-Wiederholung wartet nicht."""
+    monkeypatch.setattr(dienste, "OVERPASS_BACKOFF_S", 0)
     for d in (dienste.PHOTON_DROSSEL, dienste.NOMINATIM_DROSSEL, dienste.OVERPASS_DROSSEL, dienste.ROUTING_DROSSEL):
         d.zuruecksetzen()
 
@@ -81,13 +84,25 @@ def test_abgelaufener_cache_fragt_neu(s):
 
 
 @respx.mock
-def test_nominatim_hoechstens_eine_anfrage_pro_sekunde(s):
-    """Zwei verschiedene Nominatim-Anfragen liegen mindestens 1 s auseinander; User-Agent und Sprache stimmen."""
+def test_nominatim_hoechstens_eine_anfrage_pro_sekunde(s, monkeypatch):
+    """Zwei verschiedene Nominatim-Anfragen liegen mindestens 1 s auseinander; User-Agent und Sprache stimmen.
+
+    Künstliche Zeit statt echter: die Uhr steht still, jede Aufgabe zählt ihre eigene Schlafzeit (ContextVar; gather
+    gibt jeder Aufgabe eine Kopie). So stört die Verschränkung der beiden gleichzeitigen Aufrufe die Messung nicht.
+    """
+    geschlafen = contextvars.ContextVar("geschlafen", default=0.0)
     zeiten = []
 
+    async def schlafen(sekunden):
+        """Zählt die Schlafzeit der laufenden Aufgabe, statt zu warten. Eingabe: Sekunden. Ausgabe: keine."""
+        geschlafen.set(geschlafen.get() + max(sekunden, 0))
+
+    monkeypatch.setattr(dienste, "time", types.SimpleNamespace(monotonic=lambda: 1000.0))  # nur die Drossel nutzt time
+    monkeypatch.setattr(asyncio, "sleep", schlafen)
+
     def antwort(request):
-        """Merkt sich den Zeitpunkt und prüft die Kopfzeilen. Eingabe: Anfrage. Ausgabe: Nominatim-Antwort."""
-        zeiten.append(time.monotonic())
+        """Merkt sich die künstliche Zeit der Aufgabe und prüft die Kopfzeilen. Eingabe: Anfrage. Ausgabe: Nominatim-Antwort."""
+        zeiten.append(1000.0 + geschlafen.get())
         assert request.headers["User-Agent"] == dienste.USER_AGENT and request.headers["Accept-Language"] == "de"
         return httpx.Response(200, json=NOMINATIM_SUCHE)
 
@@ -98,7 +113,7 @@ def test_nominatim_hoechstens_eine_anfrage_pro_sekunde(s):
         await asyncio.gather(geokodieren("Adresse A", s), geokodieren("Adresse B", s))
 
     asyncio.run(zwei_gleichzeitig())
-    assert len(zeiten) == 2 and zeiten[1] - zeiten[0] >= 1.0
+    assert sorted(zeiten) == [1000.0, 1001.0]
 
 
 @respx.mock
@@ -153,8 +168,7 @@ def test_dienstausfall_wird_gemeldet(s):
 
 @respx.mock
 def test_overpass_rueckfall_auf_zweiten_server_und_quelle_nennt_ihn(s, monkeypatch):
-    """Ist ein Ersatzserver eingetragen und fällt der erste aus, fragt der Code den zweiten (je Server höchstens
-    25 s); der Rechenweg der Luftlinie (und damit die Fußnote) nennt den Server, der tatsächlich geantwortet hat."""
+    """Fällt der erste Server aus, fragt der Code den zweiten (je Server höchstens OVERPASS_TIMEOUT_S); der Rechenweg der Luftlinie (und damit die Fußnote) nennt den Server, der tatsächlich geantwortet hat."""
     erster, zweiter = "https://overpass-api.de/api/interpreter", "https://ersatz.example/api/interpreter"
     monkeypatch.setenv("OVERPASS_URLS", json.dumps([erster, zweiter]))
     a = respx.post(erster).mock(return_value=httpx.Response(504))
@@ -163,14 +177,15 @@ def test_overpass_rueckfall_auf_zweiten_server_und_quelle_nennt_ihn(s, monkeypat
     respx.get(url__startswith="https://routing.openstreetmap.de").mock(return_value=httpx.Response(503))
     poi = asyncio.run(umfeld(51.3116, 9.4881, s)).pois[0]
     assert (a.call_count, b.call_count) == (1, 1)
-    assert a.calls[0].request.extensions["timeout"]["read"] == 25
+    assert a.calls[0].request.extensions["timeout"]["read"] == dienste.OVERPASS_TIMEOUT_S == 10
     assert f"über {httpx.URL(zweiter).host}" in poi.luftlinie.rechenweg_text
     assert httpx.URL(erster).host not in poi.luftlinie.rechenweg_text
 
 
-def test_standardmaessig_kein_ersatzserver():
-    """Ohne Eintrag in .env fragt die App nur overpass-api.de; ein Ersatzserver kommt nur auf Wunsch dazu."""
-    assert Konfig(_env_file=None).overpass_urls == ["https://overpass-api.de/api/interpreter"]
+def test_standardmaessig_zwei_server():
+    """Ohne Eintrag in .env: overpass-api.de, dann private.coffee (overpass.kumi.systems ist nur ein Alias darauf)."""
+    assert Konfig(_env_file=None).overpass_urls == ["https://overpass-api.de/api/interpreter",
+                                                    "https://overpass.private.coffee/api/interpreter"]
 
 
 def projekt_in(s: Session) -> Projekt:
@@ -239,12 +254,32 @@ def test_umfeld_ausfall_wird_nicht_gespeichert(s):
 
 
 @respx.mock
-def test_overpass_alle_server_aus_ist_dienst_nicht_erreichbar(s):
-    """Antwortet kein Overpass-Server, gibt es DienstNichtErreichbar; jeder Server wird genau einmal gefragt."""
-    routen = [respx.post(u).mock(return_value=httpx.Response(504)) for u in OVERPASS]
-    with pytest.raises(DienstNichtErreichbar):
+def test_overpass_alle_server_aus_einmal_wiederholt_mit_genauer_meldung(s, monkeypatch):
+    """Antwortet kein Server, wird die Runde nach einer Pause einmal wiederholt (jeder Server genau zweimal);
+    die Meldung nennt je Server Statuscode bzw. Timeout."""
+    erster, zweiter = "https://overpass-api.de/api/interpreter", "https://ersatz.example/api/interpreter"
+    monkeypatch.setenv("OVERPASS_URLS", json.dumps([erster, zweiter]))
+    a = respx.post(erster).mock(return_value=httpx.Response(406))
+    b = respx.post(zweiter).mock(side_effect=httpx.ReadTimeout("zu langsam"))
+    with pytest.raises(DienstNichtErreichbar) as fehler:
         asyncio.run(umfeld_pois(51.3116, 9.4881, s))
-    assert [r.call_count for r in routen] == [1] * len(OVERPASS) and len(respx.calls) == len(OVERPASS)
+    assert (a.call_count, b.call_count) == (2, 2)
+    assert "overpass-api.de: HTTP 406 Not Acceptable" in str(fehler.value)
+    assert "ersatz.example: keine Antwort binnen 10 s" in str(fehler.value)
+
+
+@respx.mock
+def test_overpass_cache_eines_ersatzservers_vor_netz(s, monkeypatch):
+    """Liegt die Antwort des zweiten Servers im Cache, kommt sie ohne Anfrage nach außen, auch wenn der erste
+    Server gerade ausfällt (sonst warteten Demo und erneute Läufe erst auf dessen Timeout)."""
+    erster, zweiter = "https://overpass-api.de/api/interpreter", "https://ersatz.example/api/interpreter"
+    monkeypatch.setenv("OVERPASS_URLS", json.dumps([erster, zweiter]))
+    a = respx.post(erster).mock(return_value=httpx.Response(502))
+    b = respx.post(zweiter).mock(return_value=httpx.Response(200, json={"elements": [
+        {"type": "node", "lat": 51.3130, "lon": 9.4800, "tags": {"highway": "bus_stop", "name": "Lindenplatz"}}]}))
+    asyncio.run(umfeld_pois(51.3116, 9.4881, s))
+    pois = asyncio.run(umfeld_pois(51.3116, 9.4881, s))
+    assert (a.call_count, b.call_count) == (1, 1) and pois[0].name == "Lindenplatz"
 
 
 @respx.mock
@@ -276,19 +311,30 @@ def test_overpass_abbruch_mit_status_200_wird_nicht_gecacht(s):
 
 
 @respx.mock
-def test_photon_ist_gedrosselt(s):
-    """S4: Auch Photon bekommt einen Mindestabstand (0,5 s) zwischen zwei verschiedenen Anfragen."""
+def test_photon_ist_gedrosselt(s, monkeypatch):
+    """S4: Auch Photon bekommt einen Mindestabstand (0,5 s) zwischen zwei verschiedenen Anfragen.
+
+    Mit künstlicher Uhr, die nur beim Schlafen vorrückt: echte Zeit misst die Laufzeit der Aufrufe mit und wackelt.
+    """
+    uhr = [1000.0]
     zeiten = []
 
+    async def schlafen(sekunden):
+        """Rückt die künstliche Uhr vor, statt zu warten. Eingabe: Sekunden. Ausgabe: keine."""
+        uhr[0] += max(sekunden, 0)
+
+    monkeypatch.setattr(dienste, "time", types.SimpleNamespace(monotonic=lambda: uhr[0]))  # nur die Drossel nutzt time
+    monkeypatch.setattr(asyncio, "sleep", schlafen)
+
     def antwort(_request):
-        """Merkt sich den Zeitpunkt. Eingabe: Anfrage. Ausgabe: Photon-Antwort."""
-        zeiten.append(time.monotonic())
+        """Merkt sich den Zeitpunkt der künstlichen Uhr. Eingabe: Anfrage. Ausgabe: Photon-Antwort."""
+        zeiten.append(uhr[0])
         return httpx.Response(200, json=PHOTON)
 
     respx.get(dienste.PHOTON_URL).mock(side_effect=antwort)
     asyncio.run(vorschlaege("Lindenallee 3", s))
     asyncio.run(vorschlaege("Lindenallee 30", s))
-    assert zeiten[1] - zeiten[0] >= 0.5
+    assert zeiten == [1000.0, 1000.5]
 
 
 @respx.mock

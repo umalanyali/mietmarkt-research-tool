@@ -20,9 +20,10 @@ def seed(e: Engine) -> int:
     """Ersetzt den Datenbestand durch den Demo-Datensatz.
 
     Eingabe: Engine. Ausgabe: Anzahl angelegter Projekte.
-    Wiederholbar: Tabellen werden vorher geleert, damit keine Dubletten entstehen.
+    Wiederholbar: Tabellen (außer dem Geodienst-Cache) werden vorher geleert, damit keine Dubletten entstehen.
     """
-    SQLModel.metadata.drop_all(e)
+    # Der Geodienst-Cache bleibt: er hängt an Koordinaten, nicht am Bestand, und spart Overpass nach jedem Seed
+    SQLModel.metadata.drop_all(e, tables=[t for t in SQLModel.metadata.sorted_tables if t.name != "geocache"])
     SQLModel.metadata.create_all(e)
     with e.begin() as c:  # der Volltextindex ist keine SQLModel-Tabelle und wird eigens geleert
         c.exec_driver_sql("DELETE FROM abschnitt")

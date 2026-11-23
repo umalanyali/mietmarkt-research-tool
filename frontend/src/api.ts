@@ -157,10 +157,12 @@ export class ApiFehler extends Error {
   }
 }
 
-/** Liest eine Antwort als JSON oder wirft ApiFehler. Eingabe: fetch-Antwort. Ausgabe: Daten. */
+/** Liest eine Antwort als JSON oder wirft ApiFehler. Eingabe: fetch-Antwort. Ausgabe: Daten. Bei 503 nennt die Meldung,
+ * wenn das Backend ihn mitschickt, den genauen Grund (z. B. Statuscode des ausgefallenen Dienstes). */
 async function json<T>(antwort: Response): Promise<T> {
   if (!antwort.ok) {
-    const text = antwort.status === 404 ? "Nicht gefunden" : antwort.status === 503 ? "Dienst nicht erreichbar" : `Server antwortet mit ${antwort.status}`;
+    const detail = antwort.status === 503 ? await antwort.json().then((d: { detail?: unknown }) => d.detail, () => undefined) : undefined;
+    const text = antwort.status === 404 ? "Nicht gefunden" : antwort.status === 503 ? (typeof detail === "string" ? detail : "Dienst nicht erreichbar") : `Server antwortet mit ${antwort.status}`;
     throw new ApiFehler(text, antwort.status);
   }
   return (await antwort.json()) as T;
