@@ -2,7 +2,9 @@
 
 Lokales Recherche-Tool, in dem KI-Agenten (LangGraph + Claude) für eine Adresse einen Neubau-Mietansatz herleiten. Jede Zahl rechnet Python, und jede Zahl ist bis zur Quelle belegt.
 
-![Ein echter Lauf auf dem Demo-Standort: Standort, Marktdaten, Mietansatz, Freigabe durch den Menschen, Prüfung, Bericht](docs/screenshots/lauf.gif)
+![Lauf auf dem Demo-Standort: Standort mit Umfeld, Marktdaten, Mietansatz, Freigabe durch den Menschen, Prüfung, Ergebniskarte](docs/screenshots/lauf.gif)
+
+<sub>Aufnahme mit Fake-Modell, ein echter Lauf kostet rund 0,20 €. [Video in voller Auflösung (MP4)](docs/screenshots/lauf.mp4)</sub>
 
 > Alle Daten im Repository sind synthetisch: fiktive „Musterstadt“, erfundene Adressen, Anbieter und Zahlen.
 > Die Karte liegt nur als Kulisse über einer realen Stadt, damit Straßen und Bebauung sichtbar sind.
@@ -93,7 +95,7 @@ fällt ein vertauschtes Komma oder ein erfundener Median nicht auf, kostet aber 
 
 ## Kosten pro Lauf (gemessen)
 
-Gemessen am 23.11.2026 auf dem Demo-Standort mit `skripte/lauf-gif.mjs` (der Lauf aus dem GIF oben):
+Gemessen am 23.11.2026 mit einem echten Lauf auf dem Demo-Standort (die Aufnahmen oben nutzen das Fake-Modell):
 Startseite → Demo → Analyse → Freigabe annehmen → Prüfung → Bericht.
 
 | Modelle | Token | Kosten |
@@ -116,6 +118,12 @@ Ein Lauf bricht ab, sobald er `KI_BUDGET_EUR_PRO_LAUF` erreicht (Standard 0,50 �
 
 ![Analyse-Seite des Demo-Standorts](docs/screenshots/analyse.png)
 
+Kurze Videos (MP4, Fake-Modell):
+[Umfeld auf Karte und in der Tabelle](docs/screenshots/umfeld.mp4) ·
+[mehrere Unterlagen hochladen](docs/screenshots/upload.mp4) ·
+[Ergebniskarte mit Bericht und PowerPoint-Export](docs/screenshots/ergebnis.mp4) ·
+[Handy-Ansicht](docs/screenshots/handy.mp4)
+
 ## Tests
 
 ```bash
@@ -124,7 +132,7 @@ cd backend && .venv/bin/pytest -m live -s   # echter kurzer Lauf mit Claude (kos
 cd frontend && npm test && npx tsc --noEmit
 cd frontend && node skripte/aufnahme.mjs <ordner> name=/pfad   # Screenshots (App muss laufen)
 cd frontend && node skripte/lauf.mjs                            # kompletter Lauf im Browser mit Fake-Modell (kostenlos)
-cd frontend && node skripte/lauf-gif.mjs ../docs/screenshots/lauf.gif   # echter Lauf als GIF (kostet Cent, App muss laufen)
+cd frontend && node skripte/readme-medien.mjs                   # README-GIF und -Videos neu (Fake-Modell, braucht ffmpeg und das Demo-Umfeld im Cache)
 ```
 
 ## Datenschutz: was an wen geht
