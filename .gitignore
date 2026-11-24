@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 /daten/
+*.db
+*.sqlite
+*.log
 
 # Lokale Entwürfe, nie committen
 docs/mockups/
